@@ -46,6 +46,7 @@ services:
       - './rubik/mc-create:/data'
       # Must be same mount as backups service, but can be read-only
       - './rubik/mc-backup:/backups:ro'
+      - '/etc/localtime:/etc/localtime:ro'
 
   backups:
     image: 'itzg/mc-backup:lastest'
@@ -59,6 +60,10 @@ services:
       PLAYERS_ONLINE_CHECK_INTERVAL: '15m'
       PRUNE_BACKUPS_DAYS: 14
       INITIAL_DELAY: 0
+    volumes:
+      - './rubik/mc-create:/data:ro'
+      - './rubik/mc-backup:/backups'
+      - '/etc/localtime:/etc/localtime:ro'
 
   monitor:
     image: 'itzg/mc-monitor'
@@ -98,10 +103,6 @@ services:
     depends_on:
       - 'prometheus'
 
-
   volumes:
-    - './rubik/mc-create:/data:ro'
-    - './rubik/mc-backup:/backups'
-    - '/etc/localtime:/etc/localtime:ro'
-    - prometheus-tsdb: {}
-    - grafana-lib: {}
+    prometheus-tsdb: {}
+    grafana-lib: {}
