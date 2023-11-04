@@ -1,0 +1,107 @@
+---
+version: "3.8"
+
+services:
+  mc:
+    image: 'itzg/minecraft-server:lastest'
+    ports:
+      - '25565:25565'
+      - '24454:24454/udp'
+    environment:
+      DIFFICULTY: 'hard'
+      ENABLE_ROLLING_LOGS: 'TRUE'
+      EULA: "TRUE"
+      INIT_MEMORY: '1G'
+      MAX_MEMORY: '8G'
+      MODRINTH_LOADER: 'FABRIC'
+      MODRINTH_PROJECT: 'allexio-create+'
+      MODRINTH_VERSION: '0.9.16'
+      OPS: "egut"
+      SEED: '20231024'
+      SERVER_NAME: 'Rubik Minecraft Create Server'
+      MOTD: 'Rubik Minecraft Create Server'
+      SIMULATION_DISTANCE: 16
+      TYPE: 'MODRINTH'
+      USE_AIKAR_FLAGS: 'TRUE'
+      VANILLATWEAKS_SHARECODE: 'ilFuDN'
+      VERSION: "1.20.1"
+      VIEW_DISTANCE: 24
+      ENABLE_WHITELIST: 'TRUE'
+
+    tty: true
+    stdin_open: true
+    restart: 'unless-stopped'
+    volumes:
+      - './rubik/mc-create:/data'
+      - '/etc/localtime:/etc/localtime:ro'
+
+  # "init" container for mc to restore the data volume when empty
+  restore-backup:
+    # Same image as mc, but any base image with bash and tar will work
+    image: 'itzg/mc-backup:lastest'
+    restart: no
+    entrypoint: 'restore-tar-backup'
+    volumes:
+      # Must be same mount as mc service, needs to be writable
+      - './rubik/mc-create:/data'
+      # Must be same mount as backups service, but can be read-only
+      - './rubik/mc-backup:/backups:ro'
+
+  backups:
+    image: 'itzg/mc-backup:lastest'
+    depends_on:
+      mc:
+        condition: 'service_healthy'
+    environment:
+      BACKUP_INTERVAL: "6h"
+      RCON_HOST: 'mc'
+      PAUSE_IF_NO_PLAYERS: 'TRUE'
+      PLAYERS_ONLINE_CHECK_INTERVAL: '15m'
+      PRUNE_BACKUPS_DAYS: 14
+      INITIAL_DELAY: 0
+
+  monitor:
+    image: 'itzg/mc-monitor'
+    command: 'export-for-prometheus'
+    environment:
+      EXPORT_SERVERS: 'mc'
+      DEBUG: "true"
+    depends_on:
+      - 'mc'
+
+  cadvisor:
+    image: 'gcr.io/cadvisor/cadvisor:v0.47.2'
+    ports:
+      - "8180:8080"
+    volumes:
+      - '/:/rootfs:ro'
+      - '/var/run:/var/run:rw'
+      - '/sys:/sys:ro'
+      - '/var/lib/docker/:/var/lib/docker:ro'
+
+  prometheus:
+    image: 'prom/prometheus'
+    volumes:
+      - './prometheus.yml:/etc/prometheus/prometheus.yml'
+      - 'prometheus-tsdb:/prometheus'
+    depends_on:
+      - 'monitor'
+
+  grafana:
+    image: 'grafana/grafana-oss:${GRAFANA_VERSION:-8.3.3}'
+    ports:
+      - "3000:3000"
+    volumes:
+      - 'grafana-lib:/var/lib/grafana'
+      - './rubik/mc-grafana/provisioning:/etc/grafana/provisioning'
+      - './rubik/mc-grafana/dashboards:/etc/grafana/dashboards'
+    depends_on:
+      - 'prometheus'
+
+
+  volumes:
+    - './rubik/mc-create:/data:ro'
+    - './rubik/mc-backup:/backups'
+    - '/etc/localtime:/etc/localtime:ro'
+    - prometheus-tsdb: {}
+    - grafana-lib: {}
