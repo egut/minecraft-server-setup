@@ -39,7 +39,7 @@ services:
   restore-backup:
     # Same image as mc, but any base image with bash and tar will work
     image: 'itzg/mc-backup:lastest'
-    restart: no
+    restart: 'no'
     entrypoint: 'restore-tar-backup'
     volumes:
       # Must be same mount as mc service, needs to be writable
@@ -103,6 +103,6 @@ services:
     depends_on:
       - 'prometheus'
 
-  volumes:
-    prometheus-tsdb: {}
-    grafana-lib: {}
+volumes:
+  prometheus-tsdb: {}
+  grafana-lib: {}
