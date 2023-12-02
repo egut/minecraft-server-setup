@@ -8,3 +8,8 @@ scrape_configs:
           - 'monitor:8080'
       - targets:
           - 'cadvisor:8080'
+
+  - job_name: 'fabric_exporter'
+    static_configs:
+      - targets:
+          - 'minecraft:25585'

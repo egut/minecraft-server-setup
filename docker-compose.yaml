@@ -2,7 +2,7 @@
 version: "3.8"
 
 services:
-  mc:
+  minecraft:
     image: 'itzg/minecraft-server:latest'
     ports:
       - '25565:25565'
@@ -10,29 +10,29 @@ services:
     environment:
       DIFFICULTY: 'hard'
       ENABLE_ROLLING_LOGS: 'TRUE'
+      ENABLE_WHITELIST: 'TRUE'
       EULA: "TRUE"
       INIT_MEMORY: '1G'
       MAX_MEMORY: '8G'
       MODRINTH_LOADER: 'FABRIC'
       MODRINTH_PROJECT: 'allexio-create+'
       MODRINTH_VERSION: '1.0.0'
-      OPS: "egut"
-      SEED: '20231024'
-      SERVER_NAME: "Allexio's Create Plus"
       MOTD: "Allexio's Create Plus"
+      OPS: "egut"
+      SERVER_NAME: "Allexio's Create Plus"
       SIMULATION_DISTANCE: 16
       TYPE: 'MODRINTH'
       USE_AIKAR_FLAGS: 'TRUE'
       VANILLATWEAKS_SHARECODE: 'ilFuDN'
       VERSION: "1.20.1"
       VIEW_DISTANCE: 24
-      ENABLE_WHITELIST: 'TRUE'
 
     tty: true
     stdin_open: true
     restart: 'unless-stopped'
     volumes:
       - './minecraft/mc-server:/data'
+      - './minecraft/mc-world:/data/world'
       - '/etc/localtime:/etc/localtime:ro'
 
   # "init" container for mc to restore the data volume when empty
@@ -44,6 +44,7 @@ services:
     volumes:
       # Must be same mount as mc service, needs to be writable
       - './minecraft/mc-server:/data'
+      - './minecraft/mc-world:/data/world:ro'
       # Must be same mount as backups service, but can be read-only
       - './minecraft/backup:/backups:ro'
       - '/etc/localtime:/etc/localtime:ro'
@@ -51,7 +52,7 @@ services:
   backups:
     image: 'itzg/mc-backup:latest'
     depends_on:
-      mc:
+      minecraft:
         condition: 'service_healthy'
     environment:
       BACKUP_INTERVAL: "6h"
@@ -62,6 +63,7 @@ services:
       INITIAL_DELAY: 0
     volumes:
       - './minecraft/mc-server:/data:ro'
+      - './minecraft/mc-world:/data/world:ro'
       - './minecraft/backup:/backups'
       - '/etc/localtime:/etc/localtime:ro'
 
@@ -69,10 +71,10 @@ services:
     image: 'itzg/mc-monitor'
     command: 'export-for-prometheus'
     environment:
-      EXPORT_SERVERS: 'mc'
+      EXPORT_SERVERS: 'minecraft'
       DEBUG: "true"
     depends_on:
-      - 'mc'
+      - 'minecraft'
 
   cadvisor:
     image: 'gcr.io/cadvisor/cadvisor:v0.47.2'
@@ -86,6 +88,8 @@ services:
 
   prometheus:
     image: 'prom/prometheus'
+    ports:
+      - '9090:9090'
     volumes:
       - './minecraft/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml'
       - 'prometheus-tsdb:/prometheus'

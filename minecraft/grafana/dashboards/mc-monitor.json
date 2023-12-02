@@ -455,12 +455,12 @@
     ]
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
-  "title": "MC Monitor",
+  "title": "MC Monitor - Allexio's Create Plus",
   "uid": "PpzSgJAnk",
   "version": 3,
   "weekStart": ""
