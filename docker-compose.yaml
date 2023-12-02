@@ -6,7 +6,6 @@ services:
     image: 'itzg/minecraft-server:latest'
     ports:
       - '25565:25565'
-      - '25585'
       - '24454:24454/udp'
     environment:
       DIFFICULTY: 'hard'
@@ -36,23 +35,6 @@ services:
       - './minecraft/mc-world:/data/world'
       - '/etc/localtime:/etc/localtime:ro'
 
-  bluemap:
-    image: 'ghcr.io/bluemap-minecraft/bluemap:latest'
-    restart: 'unless-stopped'
-    command: '-r -u -w'
-    ports:
-      - '8100:8100'
-    volumes:
-      - './minecraft/bluemap/config:/app/config'
-      - './minecraft/bluemap/data:/app/data'
-      - './minecraft/bluemap/web:/app/web'
-      - './minecraft/mc-world:/app/world'
-      - '/etc/localtime:/etc/localtime:ro'
-    depends_on:
-      minecraft:
-        condition: 'service_healthy'
-
-  # "init" container for mc to restore the data volume when empty
   restore-backup:
     # Same image as mc, but any base image with bash and tar will work
     image: 'itzg/mc-backup:latest'
@@ -95,8 +77,8 @@ services:
 
   cadvisor:
     image: 'gcr.io/cadvisor/cadvisor:v0.47.2'
-    ports:
-      - "8180:8080"
+    # ports:
+    #   - "8180:8080"
     volumes:
       - '/:/rootfs:ro'
       - '/var/run:/var/run:rw'
@@ -105,8 +87,8 @@ services:
 
   prometheus:
     image: 'prom/prometheus'
-    ports:
-      - '9090:9090'
+    # ports:
+    #   - '9090:9090'
     volumes:
       - './minecraft/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml'
       - 'prometheus-tsdb:/prometheus'
@@ -124,8 +106,23 @@ services:
     depends_on:
       - 'prometheus'
 
+  bluemap:
+    image: 'ghcr.io/bluemap-minecraft/bluemap:latest'
+    restart: 'unless-stopped'
+    command: '-r -u -w'
+    ports:
+      - '8100:8100'
+    volumes:
+      - './minecraft/bluemap/config:/app/config'
+      - './minecraft/bluemap/data:/app/data'
+      - './minecraft/bluemap/web:/app/web'
+      - './minecraft/mc-world:/app/world'
+      - '/etc/localtime:/etc/localtime:ro'
+    depends_on:
+      minecraft:
+        condition: 'service_healthy'
+
 
 volumes:
   prometheus-tsdb: {}
   grafana-lib: {}
-  bluemap-data: {}
