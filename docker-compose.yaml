@@ -6,6 +6,7 @@ services:
     image: 'itzg/minecraft-server:latest'
     ports:
       - '25565:25565'
+      - '25585'
       - '24454:24454/udp'
     environment:
       DIFFICULTY: 'hard'
@@ -34,6 +35,22 @@ services:
       - './minecraft/mc-server:/data'
       - './minecraft/mc-world:/data/world'
       - '/etc/localtime:/etc/localtime:ro'
+
+  bluemap:
+    image: 'ghcr.io/bluemap-minecraft/bluemap:latest'
+    restart: 'unless-stopped'
+    command: '-r -u -w'
+    ports:
+      - '8100:8100'
+    volumes:
+      - './minecraft/bluemap/config:/app/config'
+      - './minecraft/bluemap/data:/app/data'
+      - './minecraft/bluemap/web:/app/web'
+      - './minecraft/mc-world:/app/world'
+      - '/etc/localtime:/etc/localtime:ro'
+    depends_on:
+      minecraft:
+        condition: 'service_healthy'
 
   # "init" container for mc to restore the data volume when empty
   restore-backup:
@@ -107,17 +124,8 @@ services:
     depends_on:
       - 'prometheus'
 
-  # bluemap:
-  #   image: 'bmoorman/bluemap:latest'
-  #   restart: 'unless-stopped'
-  #   ports:
-  #     - "8100:8100"
-  #   volumes:
-  #     - 'bluemap-data:/var/lib/bluemap'
-  #     - './minecraft/mc-server:/var/lib/minecraft:ro'
-  #     - '/etc/localtime:/etc/localtime:ro'
 
 volumes:
   prometheus-tsdb: {}
   grafana-lib: {}
-  # bluemap-data: {}
+  bluemap-data: {}
