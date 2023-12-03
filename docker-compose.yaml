@@ -5,12 +5,13 @@ services:
   minecraft:
     image: 'itzg/minecraft-server:latest'
     ports:
-      - '25565:25565'
+      - '25003:25003'
       - '24454:24454/udp'
     environment:
       DIFFICULTY: 'hard'
       ENABLE_ROLLING_LOGS: 'TRUE'
       ENABLE_WHITELIST: 'TRUE'
+      ENABLE_JMX: 'TRUE'
       EULA: "TRUE"
       INIT_MEMORY: '1G'
       MAX_MEMORY: '8G'
@@ -20,12 +21,14 @@ services:
       MOTD: "Allexio's Create Plus"
       OPS: "egut"
       SERVER_NAME: "Allexio's Create Plus"
+      SERVER_PORT: 25003
       SIMULATION_DISTANCE: 16
       TYPE: 'MODRINTH'
       USE_AIKAR_FLAGS: 'TRUE'
       VANILLATWEAKS_SHARECODE: 'ilFuDN'
       VERSION: "1.20.1"
       VIEW_DISTANCE: 24
+
 
     tty: true
     stdin_open: true
@@ -115,12 +118,14 @@ services:
 
   grafana:
     image: 'grafana/grafana-oss:${GRAFANA_VERSION:-8.3.3}'
-    ports:
-      - "3000:3000"
     volumes:
       - 'grafana-lib:/var/lib/grafana'
       - './minecraft/grafana/provisioning:/etc/grafana/provisioning'
       - './minecraft/grafana/dashboards:/etc/grafana/dashboards'
+
+    environment:
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
 
     depends_on:
       - 'prometheus'

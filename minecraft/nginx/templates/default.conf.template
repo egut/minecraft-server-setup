@@ -17,5 +17,9 @@ server {
     location /map/ {
         proxy_pass http://bluemap:8100/;
     }
+
+    location /grafana/ {
+        proxy_pass http://grafana:3000/;
+    }
 }
 
