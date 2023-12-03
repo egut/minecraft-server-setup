@@ -14,5 +14,8 @@ server {
         root /var/www/certbot;
     }
 
+    location /map/ {
+        proxy_pass http://bluemap:8100/;
+    }
 }
 

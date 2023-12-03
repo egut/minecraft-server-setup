@@ -136,8 +136,6 @@ services:
     image: 'ghcr.io/bluemap-minecraft/bluemap:latest'
     restart: 'unless-stopped'
     command: '-r -u -w'
-    ports:
-      - '8100:8100'
     volumes:
       - './minecraft/bluemap/config:/app/config'
       - './minecraft/bluemap/data:/app/data'
