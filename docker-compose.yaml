@@ -35,18 +35,21 @@ services:
       - './minecraft/mc-world:/data/world'
       - '/etc/localtime:/etc/localtime:ro'
 
+    networks:
+      - 'minecraft'
+
   restore-backup:
-    # Same image as mc, but any base image with bash and tar will work
     image: 'itzg/mc-backup:latest'
     restart: 'no'
     entrypoint: 'restore-tar-backup'
     volumes:
-      # Must be same mount as mc service, needs to be writable
       - './minecraft/mc-server:/data'
       - './minecraft/mc-world:/data/world:ro'
-      # Must be same mount as backups service, but can be read-only
       - './minecraft/backup:/backups:ro'
       - '/etc/localtime:/etc/localtime:ro'
+
+    networks:
+      - 'minecraft'
 
   backups:
     image: 'itzg/mc-backup:latest'
@@ -55,7 +58,7 @@ services:
         condition: 'service_healthy'
     environment:
       BACKUP_INTERVAL: "6h"
-      RCON_HOST: 'mc'
+      RCON_HOST: 'minecraft'
       PAUSE_IF_NO_PLAYERS: 'TRUE'
       PLAYERS_ONLINE_CHECK_INTERVAL: '15m'
       PRUNE_BACKUPS_DAYS: 14
@@ -66,34 +69,49 @@ services:
       - './minecraft/backup:/backups'
       - '/etc/localtime:/etc/localtime:ro'
 
+    networks:
+      - 'minecraft'
+
   monitor:
     image: 'itzg/mc-monitor'
     command: 'export-for-prometheus'
     environment:
       EXPORT_SERVERS: 'minecraft'
       DEBUG: "true"
+
     depends_on:
+      - 'minecraft'
+
+    networks:
+      - 'admin'
       - 'minecraft'
 
   cadvisor:
     image: 'gcr.io/cadvisor/cadvisor:v0.47.2'
-    # ports:
-    #   - "8180:8080"
     volumes:
       - '/:/rootfs:ro'
       - '/var/run:/var/run:rw'
       - '/sys:/sys:ro'
       - '/var/lib/docker/:/var/lib/docker:ro'
 
+    networks:
+      - 'admin'
+
   prometheus:
     image: 'prom/prometheus'
+    # If you need to expose prometheus to localhost, uncommon
     # ports:
     #   - '9090:9090'
     volumes:
       - './minecraft/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml'
       - 'prometheus-tsdb:/prometheus'
+
     depends_on:
       - 'monitor'
+
+    networks:
+      - 'admin'
+      - 'minecraft'
 
   grafana:
     image: 'grafana/grafana-oss:${GRAFANA_VERSION:-8.3.3}'
@@ -103,9 +121,17 @@ services:
       - 'grafana-lib:/var/lib/grafana'
       - './minecraft/grafana/provisioning:/etc/grafana/provisioning'
       - './minecraft/grafana/dashboards:/etc/grafana/dashboards'
+
     depends_on:
       - 'prometheus'
 
+    networks:
+      - 'admin'
+      - 'web'
+
+
+  # Additional BlueMaps addons
+  # https://bluemap.bluecolored.de/community/3rdPartySupport.html
   bluemap:
     image: 'ghcr.io/bluemap-minecraft/bluemap:latest'
     restart: 'unless-stopped'
@@ -118,11 +144,57 @@ services:
       - './minecraft/bluemap/web:/app/web'
       - './minecraft/mc-world:/app/world'
       - '/etc/localtime:/etc/localtime:ro'
+
     depends_on:
       minecraft:
         condition: 'service_healthy'
 
+    networks:
+      - 'minecraft'
+      - 'web'
+
+  nginx:
+    image: 'nginx:alpine'
+    restart: 'unless-stopped'
+    ports:
+      - '443:443'
+      - '8080:8080'
+    volumes:
+      # For cert handling
+      - './minecraft/certbot/conf:/etc/letsencrypt:ro'
+      - './minecraft/certbot/www:/var/www/certbot:ro'
+
+      # For web pages
+      - './minecraft/nginx/html:/usr/share/nginx/html:ro'
+
+      # For Nginx configuration
+      - './minecraft/nginx/templates:/etc/nginx/templates:ro'
+      - '/etc/localtime:/etc/localtime:ro'
+
+    environment:
+      - 'NGINX_HOST=minecraft'
+      - 'NGINX_PORT=8080'
+
+    depends_on:
+      - 'grafana'
+      - 'bluemap'
+
+    networks:
+      - 'web'
+
+  # certbot:
+  #   image: 'certbot/certbot'
+  #   restart: 'unless-stopped'
+  #   volumes:
+  #     - './minecraft/certbot/conf:/etc/letsencrypt'
+  #     - './minecraft/certbot/www:/var/www/certbot:rw'
+  #     - '/etc/localtime:/etc/localtime:ro'
 
 volumes:
   prometheus-tsdb: {}
   grafana-lib: {}
+
+networks:
+  minecraft:
+  admin:
+  web:
