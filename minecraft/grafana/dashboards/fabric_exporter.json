@@ -1,4 +1,53 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": [],
+  "__requires": [
+    {
+      "type": "panel",
+      "id": "bargauge",
+      "name": "Bar gauge",
+      "version": ""
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "8.3.3"
+    },
+    {
+      "type": "panel",
+      "id": "graph",
+      "name": "Graph (old)",
+      "version": ""
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -22,8 +71,8 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 14492,
   "graphTooltip": 1,
-  "id": 2,
-  "iteration": 1701729523917,
+  "id": null,
+  "iteration": 1701730084500,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -43,7 +92,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -102,7 +151,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -169,7 +218,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -236,7 +285,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -299,18 +348,18 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 6
       },
       "hiddenSeries": false,
-      "id": 8,
+      "id": 4,
       "legend": {
         "avg": false,
         "current": false,
@@ -322,7 +371,7 @@
       },
       "lines": true,
       "linewidth": 1,
-      "nullPointMode": "null as zero",
+      "nullPointMode": "null",
       "options": {
         "alertThreshold": true
       },
@@ -333,20 +382,20 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": true,
-      "steppedLine": true,
+      "stack": false,
+      "steppedLine": false,
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(minecraft_players_online{instance=~\"$instance\",job=~\"$job\"}) by (world)",
+          "expr": "minecraft_mspt{type=\"mean\",instance=~\"$instance\",job=~\"$job\"}",
           "interval": "",
-          "legendFormat": "Players in {{world}}",
+          "legendFormat": "MSPT",
           "refId": "A"
         }
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Players online",
+      "title": "Milliseconds Per Tick",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -360,13 +409,13 @@
       },
       "yaxes": [
         {
-          "$$hashKey": "object:574",
+          "$$hashKey": "object:236",
           "format": "short",
           "logBase": 1,
           "show": true
         },
         {
-          "$$hashKey": "object:575",
+          "$$hashKey": "object:237",
           "format": "short",
           "logBase": 1,
           "show": true
@@ -377,69 +426,13 @@
       }
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 36,
-        "w": 12,
-        "x": 0,
-        "y": 15
-      },
-      "id": 17,
-      "options": {
-        "displayMode": "basic",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true,
-        "text": {}
-      },
-      "pluginVersion": "8.3.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(minecraft_entities{instance=~\"$instance\",job=~\"$job\"}) by (type)",
-          "interval": "",
-          "legendFormat": "{{type}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Top entities by type",
-      "type": "bargauge"
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -447,7 +440,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 15
+        "y": 6
       },
       "hiddenSeries": false,
       "id": 2,
@@ -523,7 +516,231 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "hiddenSeries": false,
+      "id": 8,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.3.3",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": true,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(minecraft_players_online{instance=~\"$instance\",job=~\"$job\"}) by (world)",
+          "interval": "",
+          "legendFormat": "Players in {{world}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Players online",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:574",
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:575",
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "hiddenSeries": false,
+      "id": 6,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.3.3",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(minecraft_entities{instance=~\"$instance\",job=~\"$job\"}) by (world)",
+          "interval": "",
+          "legendFormat": "Entities in {{world}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Entities by world",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:574",
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:575",
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 27,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "id": 17,
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "text": {}
+      },
+      "pluginVersion": "8.3.3",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(minecraft_entities{instance=~\"$instance\",job=~\"$job\"}) by (type)",
+          "interval": "",
+          "legendFormat": "{{type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Top entities by type",
+      "type": "bargauge"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -532,6 +749,90 @@
         "w": 12,
         "x": 12,
         "y": 24
+      },
+      "hiddenSeries": false,
+      "id": 7,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.3.3",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(minecraft_entities{instance=~\"$instance\",job=~\"$job\"}) by (group)",
+          "interval": "",
+          "legendFormat": "{{group}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Entities by spawn group",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:574",
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:575",
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 33
       },
       "hiddenSeries": false,
       "id": 9,
@@ -607,7 +908,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -615,7 +916,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 33
+        "y": 42
       },
       "hiddenSeries": false,
       "id": 10,
@@ -685,90 +986,6 @@
       }
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 42
-      },
-      "hiddenSeries": false,
-      "id": 7,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null as zero",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "8.3.3",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(minecraft_entities{instance=~\"$instance\",job=~\"$job\"}) by (group)",
-          "interval": "",
-          "legendFormat": "{{group}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Entities by spawn group",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:574",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:575",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -784,7 +1001,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -907,7 +1124,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "jvm_memory_bytes_used{job=~\"$job\", instance=\"$instance\", area=\"heap\"}",
@@ -919,7 +1136,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": " jvm_memory_bytes_max{job=~\"$job\", instance=\"$instance\", area=\"heap\"}",
           "format": "time_series",
@@ -929,7 +1146,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "jvm_memory_bytes_committed{job=~\"$job\", instance=\"$instance\", area=\"heap\"}",
@@ -947,7 +1164,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1069,7 +1286,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "jvm_memory_bytes_used{job=~\"$job\", instance=\"$instance\", area=\"nonheap\"}",
@@ -1081,7 +1298,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": " jvm_memory_bytes_max{job=~\"$job\", instance=\"$instance\", area=\"nonheap\"}",
           "format": "time_series",
@@ -1091,7 +1308,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "jvm_memory_bytes_committed{job=~\"$job\", instance=\"$instance\", area=\"nonheap\"}",
@@ -1109,7 +1326,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1191,7 +1408,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_max{job=~\"$job\", instance=\"$instance\",pool=\"G1 Eden Space\"}",
@@ -1205,7 +1422,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_used{job=~\"$job\", instance=\"$instance\",pool=\"G1 Eden Space\"}",
@@ -1219,7 +1436,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_committed{job=~\"$job\", instance=\"$instance\",pool=\"G1 Eden Space\"}",
@@ -1238,7 +1455,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1320,7 +1537,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_memory_pool_bytes_max{job=~\"$job\", instance=\"$instance\",pool=\"Metaspace\"}",
           "format": "time_series",
@@ -1333,7 +1550,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_memory_pool_bytes_used{job=~\"$job\", instance=\"$instance\",pool=\"Metaspace\"}",
           "format": "time_series",
@@ -1346,7 +1563,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_memory_pool_bytes_committed{job=~\"$job\", instance=\"$instance\",pool=\"Metaspace\"}",
           "format": "time_series",
@@ -1364,7 +1581,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1446,7 +1663,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_memory_pool_bytes_max{job=~\"$job\", instance=\"$instance\",pool=\"Code Cache\"}",
           "format": "time_series",
@@ -1459,7 +1676,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_memory_pool_bytes_used{job=~\"$job\", instance=\"$instance\",pool=\"Code Cache\"}",
           "format": "time_series",
@@ -1472,7 +1689,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_memory_pool_bytes_committed{job=~\"$job\", instance=\"$instance\",pool=\"Code Cache\"}",
           "format": "time_series",
@@ -1490,7 +1707,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1573,7 +1790,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_memory_pool_bytes_max{job=~\"$job\", instance=\"$instance\",pool=\"Compressed Class Space\"}",
           "format": "time_series",
@@ -1586,7 +1803,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_memory_pool_bytes_used{job=~\"$job\", instance=\"$instance\",pool=\"Compressed Class Space\"}",
           "format": "time_series",
@@ -1599,7 +1816,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_memory_pool_bytes_committed{job=~\"$job\", instance=\"$instance\",pool=\"Compressed Class Space\"}",
           "format": "time_series",
@@ -1617,7 +1834,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1699,7 +1916,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_max{job=~\"$job\", instance=\"$instance\",pool=\"G1 Survivor Space\"}",
@@ -1713,7 +1930,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_used{job=~\"$job\", instance=\"$instance\",pool=\"G1 Survivor Space\"}",
@@ -1727,7 +1944,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_committed{job=~\"$job\", instance=\"$instance\",pool=\"G1 Survivor Space\"}",
@@ -1746,7 +1963,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1828,7 +2045,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_max{job=~\"$job\", instance=\"$instance\",pool=\"G1 Old Gen\"}",
@@ -1842,7 +2059,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_used{job=~\"$job\", instance=\"$instance\",pool=\"G1 Old Gen\"}",
@@ -1856,7 +2073,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_committed{job=~\"$job\", instance=\"$instance\",pool=\"G1 Old Gen\"}",
@@ -1879,184 +2096,16 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 64
-      },
-      "hiddenSeries": false,
-      "id": 4,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "8.3.3",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "minecraft_mspt{type=\"mean\",instance=~\"$instance\",job=~\"$job\"}",
-          "interval": "",
-          "legendFormat": "MSPT",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Milliseconds Per Tick",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:236",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:237",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 64
-      },
-      "hiddenSeries": false,
-      "id": 6,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null as zero",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "8.3.3",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(minecraft_entities{instance=~\"$instance\",job=~\"$job\"}) by (world)",
-          "interval": "",
-          "legendFormat": "Entities in {{world}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Entities by world",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:574",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:575",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "decimals": 0,
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 16,
-        "w": 4,
+        "w": 5,
         "x": 0,
-        "y": 73
+        "y": 64
       },
       "hiddenSeries": false,
       "id": 3,
@@ -2091,7 +2140,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_threads_current{job=~\"$job\", instance=\"$instance\"}",
           "format": "time_series",
@@ -2103,7 +2152,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_threads_daemon{job=~\"$job\", instance=\"$instance\"}",
           "format": "time_series",
@@ -2115,7 +2164,7 @@
         },
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_threads_deadlocked{job=~\"$job\", instance=\"$instance\"}",
           "format": "time_series",
@@ -2160,7 +2209,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2216,8 +2265,8 @@
       "gridPos": {
         "h": 8,
         "w": 9,
-        "x": 4,
-        "y": 73
+        "x": 5,
+        "y": 64
       },
       "id": 5,
       "links": [],
@@ -2240,7 +2289,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "increase(jvm_gc_collection_seconds_sum{job=~\"$job\", instance=\"$instance\"}[$__interval])",
           "format": "time_series",
@@ -2262,16 +2311,16 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "decimals": 0,
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 11,
-        "x": 13,
-        "y": 73
+        "w": 10,
+        "x": 14,
+        "y": 64
       },
       "hiddenSeries": false,
       "id": 32,
@@ -2305,7 +2354,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "jvm_classes_currently_loaded{job=~\"$job\", instance=\"$instance\"}",
           "format": "time_series",
@@ -2352,7 +2401,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2409,8 +2458,8 @@
       "gridPos": {
         "h": 8,
         "w": 9,
-        "x": 4,
-        "y": 81
+        "x": 5,
+        "y": 72
       },
       "id": 6,
       "links": [],
@@ -2433,7 +2482,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "increase(jvm_gc_collection_seconds_count{job=~\"$job\", instance=\"$instance\"}[$__interval])",
           "format": "time_series",
@@ -2455,16 +2504,16 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "decimals": 0,
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 11,
-        "x": 13,
-        "y": 81
+        "w": 10,
+        "x": 14,
+        "y": 72
       },
       "hiddenSeries": false,
       "id": 39,
@@ -2498,7 +2547,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "process_open_fds{job=~\"$job\", instance=\"$instance\"}",
           "format": "time_series",
@@ -2552,14 +2601,10 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
-        },
+        "current": {},
         "datasource": {
           "type": "prometheus",
-          "uid": "PBFA97CFB590B2093"
+          "uid": "${DS_PROMETHEUS}"
         },
         "definition": "query_result(up{job=~\"$job\"})",
         "description": "",
@@ -2580,14 +2625,10 @@
         "type": "query"
       },
       {
-        "current": {
-          "selected": false,
-          "text": "minecraft",
-          "value": "minecraft"
-        },
+        "current": {},
         "datasource": {
           "type": "prometheus",
-          "uid": "PBFA97CFB590B2093"
+          "uid": "${DS_PROMETHEUS}"
         },
         "definition": "query_result(minecraft_entities)",
         "hide": 0,
@@ -2615,6 +2656,6 @@
   "timezone": "",
   "title": "FabricExporter - Minecraft",
   "uid": "6UU5TBqGz",
-  "version": 3,
+  "version": 5,
   "weekStart": ""
 }
