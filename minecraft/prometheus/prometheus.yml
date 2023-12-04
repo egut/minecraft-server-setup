@@ -2,14 +2,18 @@
 global:
   scrape_interval: '30s'
 scrape_configs:
-  - job_name: 'mc-monitor'
+  - job_name: 'cadvisor'
     static_configs:
-      - targets:
-          - 'monitor:8080'
       - targets:
           - 'cadvisor:8080'
 
-  - job_name: 'fabric_exporter'
+  - job_name: 'minecraft'
     static_configs:
       - targets:
           - 'minecraft:25585'
+
+
+  - job_name: 'minecraft_server'
+    static_configs:
+      - targets:
+          - 'node-exporter:9100'

@@ -75,19 +75,6 @@ services:
     networks:
       - 'minecraft'
 
-  monitor:
-    image: 'itzg/mc-monitor'
-    command: 'export-for-prometheus'
-    environment:
-      EXPORT_SERVERS: 'minecraft'
-      DEBUG: "true"
-
-    depends_on:
-      - 'minecraft'
-
-    networks:
-      - 'admin'
-      - 'minecraft'
 
   cadvisor:
     image: 'gcr.io/cadvisor/cadvisor:v0.47.2'
@@ -97,6 +84,12 @@ services:
       - '/sys:/sys:ro'
       - '/var/lib/docker/:/var/lib/docker:ro'
 
+    networks:
+      - 'admin'
+
+  node-exporter:
+    image: 'prom/node-exporter:latest'
+    restart: 'unless-stopped'
     networks:
       - 'admin'
 
@@ -110,8 +103,8 @@ services:
       - 'prometheus-tsdb:/prometheus'
 
     depends_on:
-      - 'monitor'
-
+      - 'node-exporter'
+      - 'cadvisor'
     networks:
       - 'admin'
       - 'minecraft'
@@ -122,10 +115,13 @@ services:
       - 'grafana-lib:/var/lib/grafana'
       - './minecraft/grafana/provisioning:/etc/grafana/provisioning'
       - './minecraft/grafana/dashboards:/etc/grafana/dashboards'
+      - '/etc/localtime:/etc/localtime:ro'
 
     environment:
       GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_UID: '1000'
+    user: '1000'
 
     depends_on:
       - 'prometheus'

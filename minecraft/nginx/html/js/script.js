@@ -8,7 +8,7 @@ const config = {
     serverInfo: {
         serverLogoImageFileName: "logo.png", /*This is a file name for logo in /images/ (If you upload new logo with other name, you must change this value)*/
         serverName: "Allexio's Create Plus", /*Server name*/
-        serverIp: "localhost:25003", /*Server IP (if you want to add online user counter, you must have true the enable-status and enable-query of server.properties)*/
+        serverIp: "localhost", /*Server IP (if you want to add online user counter, you must have true the enable-status and enable-query of server.properties)*/
         discordServerID: "157546313783836672" /*Your server ID (if you want to add online user counter, you must have enabled Discord server widget)*/
     },
 
@@ -26,7 +26,7 @@ const config = {
     then you must add this group with same name to atGroupsDefaultColors and set the color you want for the group.
     You can also set a special color for a specific user, just put it in the rankColor of that user.
 
-    All skins for original players are generate automatically. If you want to add skins to warez players, yout must add url for skin to skinUrlOrPathToFile
+    All skins for original players are generate automaticaly. If you want to add skins to warez players, yout must add url for skin to skinUrlOrPathToFile
         {
             inGameName: "Astronavta",  <--- In-Game name
             rank: "Owner",  <-- rank
@@ -225,7 +225,7 @@ const setDataFromConfigToHtml = async () => {
         /*Set config data to header*/
         serverLogoHeader.src = `images/` + config.serverInfo.serverLogoImageFileName;
         discordOnlineUsers.innerHTML = await getDiscordOnlineUsers();
-        // minecraftOnlinePlayers.innerHTML = await getMinecraftOnlinePlayer();
+        minecraftOnlinePlayers.innerHTML = await getMinecraftOnlinePlayer();
     } else if(locationPathname.includes("rules")) {
         copyIp();
     }
