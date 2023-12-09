@@ -92,7 +92,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -151,7 +151,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -218,7 +218,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -285,7 +285,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -348,7 +348,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -432,7 +432,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -516,7 +516,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -600,7 +600,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -680,7 +680,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -740,7 +740,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -824,7 +824,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -908,7 +908,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1001,7 +1001,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1124,7 +1124,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "jvm_memory_bytes_used{job=~\"$job\", instance=\"$instance\", area=\"heap\"}",
@@ -1136,7 +1136,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": " jvm_memory_bytes_max{job=~\"$job\", instance=\"$instance\", area=\"heap\"}",
           "format": "time_series",
@@ -1146,7 +1146,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "jvm_memory_bytes_committed{job=~\"$job\", instance=\"$instance\", area=\"heap\"}",
@@ -1164,7 +1164,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1286,7 +1286,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "jvm_memory_bytes_used{job=~\"$job\", instance=\"$instance\", area=\"nonheap\"}",
@@ -1298,7 +1298,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": " jvm_memory_bytes_max{job=~\"$job\", instance=\"$instance\", area=\"nonheap\"}",
           "format": "time_series",
@@ -1308,7 +1308,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
           "expr": "jvm_memory_bytes_committed{job=~\"$job\", instance=\"$instance\", area=\"nonheap\"}",
@@ -1326,7 +1326,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1408,7 +1408,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_max{job=~\"$job\", instance=\"$instance\",pool=\"G1 Eden Space\"}",
@@ -1422,7 +1422,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_used{job=~\"$job\", instance=\"$instance\",pool=\"G1 Eden Space\"}",
@@ -1436,7 +1436,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_committed{job=~\"$job\", instance=\"$instance\",pool=\"G1 Eden Space\"}",
@@ -1455,7 +1455,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1537,7 +1537,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_memory_pool_bytes_max{job=~\"$job\", instance=\"$instance\",pool=\"Metaspace\"}",
           "format": "time_series",
@@ -1550,7 +1550,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_memory_pool_bytes_used{job=~\"$job\", instance=\"$instance\",pool=\"Metaspace\"}",
           "format": "time_series",
@@ -1563,7 +1563,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_memory_pool_bytes_committed{job=~\"$job\", instance=\"$instance\",pool=\"Metaspace\"}",
           "format": "time_series",
@@ -1581,7 +1581,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1663,7 +1663,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_memory_pool_bytes_max{job=~\"$job\", instance=\"$instance\",pool=\"Code Cache\"}",
           "format": "time_series",
@@ -1676,7 +1676,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_memory_pool_bytes_used{job=~\"$job\", instance=\"$instance\",pool=\"Code Cache\"}",
           "format": "time_series",
@@ -1689,7 +1689,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_memory_pool_bytes_committed{job=~\"$job\", instance=\"$instance\",pool=\"Code Cache\"}",
           "format": "time_series",
@@ -1707,7 +1707,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1790,7 +1790,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_memory_pool_bytes_max{job=~\"$job\", instance=\"$instance\",pool=\"Compressed Class Space\"}",
           "format": "time_series",
@@ -1803,7 +1803,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_memory_pool_bytes_used{job=~\"$job\", instance=\"$instance\",pool=\"Compressed Class Space\"}",
           "format": "time_series",
@@ -1816,7 +1816,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_memory_pool_bytes_committed{job=~\"$job\", instance=\"$instance\",pool=\"Compressed Class Space\"}",
           "format": "time_series",
@@ -1834,7 +1834,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -1916,7 +1916,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_max{job=~\"$job\", instance=\"$instance\",pool=\"G1 Survivor Space\"}",
@@ -1930,7 +1930,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_used{job=~\"$job\", instance=\"$instance\",pool=\"G1 Survivor Space\"}",
@@ -1944,7 +1944,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_committed{job=~\"$job\", instance=\"$instance\",pool=\"G1 Survivor Space\"}",
@@ -1963,7 +1963,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -2045,7 +2045,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_max{job=~\"$job\", instance=\"$instance\",pool=\"G1 Old Gen\"}",
@@ -2059,7 +2059,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_used{job=~\"$job\", instance=\"$instance\",pool=\"G1 Old Gen\"}",
@@ -2073,7 +2073,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "exemplar": true,
           "expr": "jvm_memory_pool_bytes_committed{job=~\"$job\", instance=\"$instance\",pool=\"G1 Old Gen\"}",
@@ -2096,7 +2096,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "decimals": 0,
       "fill": 1,
@@ -2140,7 +2140,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_threads_current{job=~\"$job\", instance=\"$instance\"}",
           "format": "time_series",
@@ -2152,7 +2152,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_threads_daemon{job=~\"$job\", instance=\"$instance\"}",
           "format": "time_series",
@@ -2164,7 +2164,7 @@
         },
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_threads_deadlocked{job=~\"$job\", instance=\"$instance\"}",
           "format": "time_series",
@@ -2209,7 +2209,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -2289,7 +2289,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "increase(jvm_gc_collection_seconds_sum{job=~\"$job\", instance=\"$instance\"}[$__interval])",
           "format": "time_series",
@@ -2311,7 +2311,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "decimals": 0,
       "fill": 1,
@@ -2354,7 +2354,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "jvm_classes_currently_loaded{job=~\"$job\", instance=\"$instance\"}",
           "format": "time_series",
@@ -2401,7 +2401,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -2482,7 +2482,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "increase(jvm_gc_collection_seconds_count{job=~\"$job\", instance=\"$instance\"}[$__interval])",
           "format": "time_series",
@@ -2504,7 +2504,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "PBFA97CFB590B2093"
       },
       "decimals": 0,
       "fill": 1,
@@ -2547,7 +2547,7 @@
       "targets": [
         {
           "datasource": {
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "process_open_fds{job=~\"$job\", instance=\"$instance\"}",
           "format": "time_series",
@@ -2604,7 +2604,7 @@
         "current": {},
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "PBFA97CFB590B2093"
         },
         "definition": "query_result(up{job=~\"$job\"})",
         "description": "",
@@ -2628,7 +2628,7 @@
         "current": {},
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "PBFA97CFB590B2093"
         },
         "definition": "query_result(minecraft_entities)",
         "hide": 0,
@@ -2654,7 +2654,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "FabricExporter - Minecraft",
+  "title": "Minecraft - Monitoring",
   "uid": "6UU5TBqGz",
   "version": 5,
   "weekStart": ""
