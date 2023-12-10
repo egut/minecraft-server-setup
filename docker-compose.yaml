@@ -1,9 +1,20 @@
 ---
 version: "3.8"
 
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "1m"
+    max-file: "1"
+    tag: "{{.Name}}"
+
 services:
   minecraft:
     image: 'itzg/minecraft-server:latest'
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
     ports:
       - '25565:25565'
     #  - '24454:24454/udp'
@@ -28,8 +39,6 @@ services:
       VANILLATWEAKS_SHARECODE: 'ilFuDN'
       VERSION: "1.20.1"
       VIEW_DISTANCE: 24
-
-
     tty: true
     stdin_open: true
     restart: 'unless-stopped'
@@ -37,7 +46,7 @@ services:
       - './minecraft/mc-server:/data'
       - './minecraft/mc-world:/data/world'
       - '/etc/localtime:/etc/localtime:ro'
-
+    logging: *default-logging
     networks:
       - 'minecraft'
 
@@ -83,7 +92,6 @@ services:
       - '/var/run:/var/run:rw'
       - '/sys:/sys:ro'
       - '/var/lib/docker/:/var/lib/docker:ro'
-
     networks:
       - 'admin'
 
@@ -95,13 +103,12 @@ services:
 
   prometheus:
     image: 'prom/prometheus'
-    # If you need to expose prometheus to localhost, uncommon
+    # If you need to expose Prometheus to localhost, uncommon
     # ports:
     #   - '9090:9090'
     volumes:
       - './minecraft/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml'
       - 'prometheus-tsdb:/prometheus'
-
     depends_on:
       - 'node-exporter'
       - 'cadvisor'
@@ -138,6 +145,31 @@ services:
       - 'admin'
       - 'web'
 
+  loki:
+    image: 'grafana/loki:latest'
+    ports:
+      - '3100:3100'
+    command: '-config.file=/etc/loki/local-config.yaml'
+    networks:
+      - 'admin'
+    logging: *default-logging
+    volumes:
+      - 'loki:/loki'
+      - '/etc/localtime:/etc/localtime:ro'
+
+  promtail:
+    image: 'grafana/promtail:latest'
+    volumes:
+      - '/etc/localtime:/etc/localtime:ro'
+      - './minecraft/promtail/config/promtail.yml:/etc/promtail/docker-config.yaml'
+      - '/var/lib/docker/containers:/var/lib/docker/containers:ro'
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    command: '-config.file=/etc/promtail/docker-config.yaml'
+    depends_on:
+      - 'loki'
+    networks:
+      - 'admin'
+    logging: *default-logging
 
   # Additional BlueMaps addons
   # https://bluemap.bluecolored.de/community/3rdPartySupport.html
@@ -157,6 +189,7 @@ services:
     depends_on:
       minecraft:
         condition: 'service_healthy'
+    logging: *default-logging
 
     networks:
       - 'minecraft'
@@ -165,6 +198,9 @@ services:
   nginx:
     image: 'nginx:alpine'
     restart: 'unless-stopped'
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
     ports:
       - '443:443'
       - '8080:80'
@@ -183,6 +219,7 @@ services:
     environment:
       NGINX_HOST: '${SERVER_NAME}'
       NGINX_PORT: '80'
+    logging: *default-logging
 
     depends_on:
       - 'grafana'
@@ -202,6 +239,7 @@ services:
 volumes:
   prometheus-tsdb: {}
   grafana-lib: {}
+  loki: {}
 
 networks:
   minecraft:
