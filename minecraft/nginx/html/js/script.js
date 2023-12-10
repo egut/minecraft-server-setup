@@ -8,7 +8,7 @@ const config = {
     serverInfo: {
         serverLogoImageFileName: "logo.png", /*This is a file name for logo in /images/ (If you upload new logo with other name, you must change this value)*/
         serverName: "Allexio's Create Plus", /*Server name*/
-        serverIp: "localhost", /*Server IP (if you want to add online user counter, you must have true the enable-status and enable-query of server.properties)*/
+        serverIp: "mc.megufun.net", /*Server IP (if you want to add online user counter, you must have true the enable-status and enable-query of server.properties)*/
         discordServerID: "157546313783836672" /*Your server ID (if you want to add online user counter, you must have enabled Discord server widget)*/
     },
 

@@ -424,123 +424,6 @@
     color: var(--white-color);
 }
 
-/*Vote*/
-#vote .content {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    width: 100%;
-}
-
-#vote .content .info {
-    display: flex;
-    flex-direction: column;
-    gap: 40px;
-    flex: 1;
-}
-
-#vote .content .info .section-title {
-    font-size: 30px;
-    font-weight: 700;
-    color: var(--white-color);
-    position: relative;
-}
-
-#vote .content .info .section-title::before {
-    content: "";
-    position: absolute;
-    bottom: -9px;
-    left: 0;
-    width: 150px;
-    height: 1px;
-    border-radius: 5px;
-    background: var(--description-color);
-}
-
-#vote .content .info .section-title::after {
-    content: "";
-    position: absolute;
-    bottom: -10px;
-    left: 0;
-    width: 50px;
-    height: 3px;
-    border-radius: 5px;
-    background: var(--main-color);
-}
-
-
-#vote .content .info .section-description {
-    color: var(--description-color);
-    font-size: 17px;
-    max-width: 80%;
-    line-height: 1.6;
-}
-
-#vote .content .links {
-    display: flex;
-    flex-direction: row;
-    gap: 30px;
-    align-items: center;
-}
-
-#vote .content .links .url {
-    text-decoration: none;
-}
-
-#vote .content .links .url:hover .link .link-description .icon {
-    transform: scale(1.1);
-}
-
-#vote .content .links .link {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background: var(--stats-background);
-    padding: 20px;
-    border-radius: 5px;
-    max-width: 400px;
-}
-
-#vote .content .links .link h5 {
-    color: var(--white-color);
-    text-transform: uppercase;
-    font-size: 17px;
-    font-weight: 700;
-}
-
-#vote .content .links .link .link-description {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 50px;
-}
-
-#vote .content .links .link .link-description .description {
-    color: var(--description-color);
-    font-size: 15px;
-    font-weight: 400;
-    line-height: 1.6;
-}
-
-#vote .content .links .link .link-description .icon {
-    border-radius: 5px;
-    background: var(--stat-icon-background-2);
-    padding: 10px;
-    transition: 0.2s ease-in-out;
-}
-
-#vote .content .links .link .link-description .icon i {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
-    position: relative;
-    background: var(--main-color);
-    color: var(--white-color);
-    border-radius: 5px;
-}
 
 /*FAQ*/
 #faq {
@@ -555,8 +438,32 @@
 
 #faq .content .info {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between;
     gap: 40px;
+}
+
+#faq .content .info .left{
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
+}
+
+#faq .content .info .right{
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+
+    height: 100%;
+    position: relative;
+
+}
+
+#faq .content .info .right .section-title {
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--white-color);
+    position: relative;
 }
 
 #faq .content .info .section-title {
@@ -801,35 +708,6 @@
 
     #minigames .content .game:nth-child(even) img{
         order: 0;
-    }
-}
-
-/*Vote*/
-@media screen and (max-width: 1313px) {
-    #vote .content .links {
-        flex-direction: column;
-    }
-}
-
-@media screen and (max-width: 909px) {
-    #vote .content .links {
-        flex-wrap: wrap;
-        flex-direction: row;
-    }
-
-    #vote .content .links .link {
-        max-width: 300px;
-    }
-
-    #vote .content {
-        flex-direction: column;
-        gap: 40px;
-    }
-}
-
-@media screen and (max-width: 690px) {
-    #vote .content .links .link {
-        max-width: 100%;
     }
 }
 

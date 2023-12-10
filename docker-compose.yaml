@@ -5,8 +5,8 @@ services:
   minecraft:
     image: 'itzg/minecraft-server:latest'
     ports:
-      - '25003:25003'
-      - '24454:24454/udp'
+      - '25565:25565'
+    #  - '24454:24454/udp'
     environment:
       DIFFICULTY: 'hard'
       ENABLE_ROLLING_LOGS: 'TRUE'
@@ -21,7 +21,7 @@ services:
       MOTD: "Allexio's Create Plus"
       OPS: "egut"
       SERVER_NAME: "Allexio's Create Plus"
-      SERVER_PORT: 25003
+      SERVER_PORT: 25565
       SIMULATION_DISTANCE: 16
       TYPE: 'MODRINTH'
       USE_AIKAR_FLAGS: 'TRUE'
@@ -47,7 +47,7 @@ services:
     entrypoint: 'restore-tar-backup'
     volumes:
       - './minecraft/mc-server:/data'
-      - './minecraft/mc-world:/data/world:ro'
+      - './minecraft/mc-world:/data/world'
       - './minecraft/backup:/backups:ro'
       - '/etc/localtime:/etc/localtime:ro'
 
@@ -110,7 +110,9 @@ services:
       - 'minecraft'
 
   grafana:
-    image: 'grafana/grafana-oss:${GRAFANA_VERSION:-8.3.3}'
+    image: 'grafana/grafana-oss:latest'
+    ports:
+      - '3000:3000'
     volumes:
       - 'grafana-lib:/var/lib/grafana'
       - './minecraft/grafana/provisioning:/etc/grafana/provisioning'
@@ -118,8 +120,14 @@ services:
       - '/etc/localtime:/etc/localtime:ro'
 
     environment:
-      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
-      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SERVER_DOMAIN: '${SERVER_NAME}'
+      GF_SERVER_HTTP_PORT: 3000
+      GF_SERVER_PROTOCOL: 'http'
+      GF_SERVER_ROOT_URL: "http://${SERVER_NAME}/grafana/"
+
+      # For Grafana 10 the GF_SERVER_SERVE_FROM_SUB_PATH must be set to 'false'
+      # earlier versions require this to be set to 'true'
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
       GF_UID: '1000'
     user: '1000'
 
@@ -135,6 +143,8 @@ services:
   # https://bluemap.bluecolored.de/community/3rdPartySupport.html
   bluemap:
     image: 'ghcr.io/bluemap-minecraft/bluemap:latest'
+    # ports:
+    #  - '8100:8100'
     restart: 'unless-stopped'
     command: '-r -u -w'
     volumes:
@@ -157,11 +167,11 @@ services:
     restart: 'unless-stopped'
     ports:
       - '443:443'
-      - '8080:8080'
+      - '8080:80'
     volumes:
       # For cert handling
-      - './minecraft/certbot/conf:/etc/letsencrypt:ro'
-      - './minecraft/certbot/www:/var/www/certbot:ro'
+      # - './minecraft/certbot/conf:/etc/letsencrypt:ro'
+      # - './minecraft/certbot/www:/var/www/certbot:ro'
 
       # For web pages
       - './minecraft/nginx/html:/usr/share/nginx/html:ro'
@@ -171,8 +181,8 @@ services:
       - '/etc/localtime:/etc/localtime:ro'
 
     environment:
-      - 'NGINX_HOST=minecraft'
-      - 'NGINX_PORT=8080'
+      NGINX_HOST: '${SERVER_NAME}'
+      NGINX_PORT: '80'
 
     depends_on:
       - 'grafana'

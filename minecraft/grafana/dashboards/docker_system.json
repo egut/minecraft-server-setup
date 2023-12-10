@@ -1817,8 +1817,7 @@
         "hide": 0,
         "includeAll": true,
         "label": "Container Group",
-        "multi": true,
-        "name": "containergroup",
+        "multi": true,        "name": "containergroup",
         "options": [],
         "query": {
           "query": "label_values(container_group)",
