@@ -186,17 +186,24 @@ services:
     command: '-r -u -w'
     volumes:
       - './services/bluemap/config:/app/config'
-      - './services/bluemap/data:/app/data'
-      - './services/bluemap/web:/app/web'
-      - './minecraft/mc-world:/app/world'
       - './minecraft/mc-server/mods:/app/config/resourcepacks:ro'
+
+      # if you want higher control over data, use your dir here
+      # - './services/bluemap/data:/app/data'
+      - 'bluemap-data:/app/data'
+
+      # if you wan thigher control over the web, use your dir here
+      # (the cached map data is stored: /app/web/maps)
+      # - './services/bluemap/web:/app/web'
+      - 'bluemap-web:/app/web'
+
+      - './minecraft/mc-world:/app/world'
       - '/etc/localtime:/etc/localtime:ro'
 
     depends_on:
       minecraft:
         condition: 'service_healthy'
     logging: *default-logging
-    user: '1000'
     networks:
       - 'minecraft'
       - 'web'
@@ -246,6 +253,8 @@ volumes:
   prometheus: {}
   grafana: {}
   loki: {}
+  bluemap-data: {}
+  bluemap-web: {}
 
 networks:
   minecraft:
