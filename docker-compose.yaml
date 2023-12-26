@@ -57,7 +57,7 @@ services:
     volumes:
       - './minecraft/mc-server:/data'
       - './minecraft/mc-world:/data/world'
-      - './minecraft/backup:/backups:ro'
+      - './backup:/backups:ro'
       - '/etc/localtime:/etc/localtime:ro'
 
     networks:
@@ -78,7 +78,7 @@ services:
     volumes:
       - './minecraft/mc-server:/data:ro'
       - './minecraft/mc-world:/data/world:ro'
-      - './minecraft/backup:/backups'
+      - './backup:/backups'
       - '/etc/localtime:/etc/localtime:ro'
 
     networks:
@@ -107,8 +107,10 @@ services:
     # ports:
     #   - '9090:9090'
     volumes:
-      - './minecraft/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml'
-      - 'prometheus-tsdb:/prometheus'
+      - './services/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml'
+      - 'prometheus:/prometheus'
+      - '/etc/localtime:/etc/localtime:ro'
+
     depends_on:
       - 'node-exporter'
       - 'cadvisor'
@@ -118,12 +120,12 @@ services:
 
   grafana:
     image: 'grafana/grafana-oss:latest'
-    ports:
-      - '3000:3000'
+    # ports:
+    #   - '3000:3000'
     volumes:
-      - 'grafana-lib:/var/lib/grafana'
-      - './minecraft/grafana/provisioning:/etc/grafana/provisioning'
-      - './minecraft/grafana/dashboards:/etc/grafana/dashboards'
+      - './services/grafana/provisioning:/etc/grafana/provisioning'
+      - './services/grafana/dashboards:/etc/grafana/dashboards'
+      - 'grafana:/var/lib/grafana'
       - '/etc/localtime:/etc/localtime:ro'
 
     environment:
@@ -159,16 +161,19 @@ services:
 
   promtail:
     image: 'grafana/promtail:latest'
+    command: '-config.file=/etc/promtail/docker-config.yaml'
     volumes:
-      - '/etc/localtime:/etc/localtime:ro'
-      - './minecraft/promtail/config/promtail.yml:/etc/promtail/docker-config.yaml'
+      - './services/promtail/config/promtail.yml:/etc/promtail/docker-config.yaml'
       - '/var/lib/docker/containers:/var/lib/docker/containers:ro'
       - '/var/run/docker.sock:/var/run/docker.sock'
-    command: '-config.file=/etc/promtail/docker-config.yaml'
+      - '/etc/localtime:/etc/localtime:ro'
+
     depends_on:
       - 'loki'
+
     networks:
       - 'admin'
+
     logging: *default-logging
 
   # Additional BlueMaps addons
@@ -180,10 +185,10 @@ services:
     restart: 'unless-stopped'
     command: '-r -u -w'
     volumes:
-      - './minecraft/bluemap/config:/app/config'
-      - './minecraft/bluemap/data:/app/data'
-      - './minecraft/bluemap/web:/app/web'
-      - './minecraft/mc-world:/app/world'
+      - './services/bluemap/config:/app/config'
+      - './services/bluemap/data:/app/data'
+      - './services/bluemap/web:/app/web'
+      - './services/mc-world:/app/world'
       - '/etc/localtime:/etc/localtime:ro'
 
     depends_on:
@@ -202,18 +207,18 @@ services:
       logging: "promtail"
       logging_jobname: "containerlogs"
     ports:
-      - '443:443'
+      - '8443:443'
       - '8080:80'
     volumes:
       # For cert handling
-      # - './minecraft/certbot/conf:/etc/letsencrypt:ro'
-      # - './minecraft/certbot/www:/var/www/certbot:ro'
+      # - './services/certbot/conf:/etc/letsencrypt:ro'
+      # - './services/certbot/www:/var/www/certbot:ro'
 
       # For web pages
-      - './minecraft/nginx/html:/usr/share/nginx/html:ro'
+      - './services/nginx/html:/usr/share/nginx/html:ro'
 
       # For Nginx configuration
-      - './minecraft/nginx/templates:/etc/nginx/templates:ro'
+      - './services/nginx/templates:/etc/nginx/templates:ro'
       - '/etc/localtime:/etc/localtime:ro'
 
     environment:
@@ -237,8 +242,8 @@ services:
   #     - '/etc/localtime:/etc/localtime:ro'
 
 volumes:
-  prometheus-tsdb: {}
-  grafana-lib: {}
+  prometheus: {}
+  grafana: {}
   loki: {}
 
 networks:
