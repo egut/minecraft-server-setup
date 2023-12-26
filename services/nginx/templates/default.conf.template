@@ -9,8 +9,8 @@ upstream grafana {
 }
 
 server {
-    listen 80;
-    listen [::]:80;
+    listen ${NGINX_PORT};
+    listen [::]:${NGINX_PORT};
 
     server_name ${NGINX_HOST} www.${NGINX_HOST};
     server_tokens off;
