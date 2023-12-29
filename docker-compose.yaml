@@ -20,9 +20,9 @@ services:
     #  - '24454:24454/udp'
     environment:
       DIFFICULTY: 'hard'
+      ENABLE_JMX: 'TRUE'
       ENABLE_ROLLING_LOGS: 'TRUE'
       ENABLE_WHITELIST: 'TRUE'
-      ENABLE_JMX: 'TRUE'
       EULA: "TRUE"
       INIT_MEMORY: '1G'
       MAX_MEMORY: '8G'
@@ -31,6 +31,7 @@ services:
       MODRINTH_VERSION: '1.0.0'
       MOTD: "Allexio's Create Plus"
       OPS: "egut"
+      SEED: '-6337350249272507649'
       SERVER_NAME: "Allexio's Create Plus"
       SERVER_PORT: 25565
       SIMULATION_DISTANCE: 16

@@ -67,7 +67,7 @@ const config = {
     Emails are sent via https://formsubmit.co/
     */
     contactPage: {
-        email: "astronavta@example.com"
+        email: "erik.gunther@gmail.com"
     }
 }
 
