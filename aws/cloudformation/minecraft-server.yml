@@ -1,0 +1,929 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Minecraft Server Infrastructure'
+
+Parameters:
+  ServerName:
+    Type: String
+    Description: 'Name of the Minecraft server'
+    Default: 'minecraft-server'
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: '^[a-zA-Z0-9-]*$'
+    ConstraintDescription: 'Server name can only contain letters, numbers, and hyphens'
+
+  InstanceType:
+    Type: String
+    Description: 'EC2 instance type'
+    Default: 't4g.small'
+    AllowedValues:
+      - 't4g.small'
+      - 't4g.medium'
+      - 't4g.large'
+
+  HostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: 'Route 53 Hosted Zone ID'
+
+  DomainName:
+    Type: String
+    Description: 'Domain name for the Minecraft server (e.g., minecraft.example.com)'
+    AllowedPattern: '^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$'
+    ConstraintDescription: 'Must be a valid domain name'
+
+  AMI:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64'
+    Description: 'Amazon Linux 2023 ARM64 AMI ID'
+
+  MinecraftBucket:
+    Type: String
+    Description: 'S3 bucket for Minecraft artifacts'
+
+  MinecraftPort:
+    Type: Number
+    Description: 'Port number for Minecraft server'
+    Default: 25565
+    MinValue: 1024
+    MaxValue: 65535
+    ConstraintDescription: 'Must be a valid port number between 1024 and 65535'
+
+  CreateCertificate:
+    Type: String
+    Description: 'Create a new certificate for the domain'
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  EnableDeletionProtection:
+    Type: String
+    Description: 'Enable deletion protection for the load balancer'
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  EnableCrossZoneLoadBalancing:
+    Type: String
+    Description: 'Enable cross-zone load balancing'
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  InactivityShutdownMinutes:
+    Type: Number
+    Description: 'Minutes of inactivity before stopping the instance'
+    Default: 30
+    MinValue: 5
+    MaxValue: 1440
+
+  TerminateAfterDays:
+    Type: Number
+    Description: 'Days of being stopped before terminating the instance'
+    Default: 7
+    MinValue: 1
+    MaxValue: 30
+
+Conditions:
+  ShouldCreateCertificate: !Equals
+    - !Ref CreateCertificate
+    - 'true'
+
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      NLBHostedZoneId: Z26RNL4JYFTOTI
+    us-east-2:
+      NLBHostedZoneId: ZLMOA37VPKANP
+    us-west-1:
+      NLBHostedZoneId: Z24FKFUX50B4VW
+    us-west-2:
+      NLBHostedZoneId: Z18D5FSROUN65G
+    af-south-1:
+      NLBHostedZoneId: Z203XCE67M25HM
+    ap-east-1:
+      NLBHostedZoneId: Z12Y7K3UBGUAD1
+    ap-south-1:
+      NLBHostedZoneId: ZVDDRBQ08TROA
+    ap-northeast-3:
+      NLBHostedZoneId: Z1GWIQ4HH19I5X
+    ap-northeast-2:
+      NLBHostedZoneId: ZIBE1TIR4HY56
+    ap-southeast-1:
+      NLBHostedZoneId: ZKVM4W9LS7TM
+    ap-southeast-2:
+      NLBHostedZoneId: ZCT6FZBF4DROD
+    ap-northeast-1:
+      NLBHostedZoneId: Z31USIVHYNEOWT
+    ca-central-1:
+      NLBHostedZoneId: Z2EPGBW3API2WT
+    eu-central-1:
+      NLBHostedZoneId: Z3F0SRJ5LGBH90
+    eu-west-1:
+      NLBHostedZoneId: Z2IFOLAFXWLO4F
+    eu-west-2:
+      NLBHostedZoneId: ZD4D7Y8KGAS4G
+    eu-south-1:
+      NLBHostedZoneId: Z23146JA1KNAFP
+    eu-west-3:
+      NLBHostedZoneId: Z1CMS0P5QUZ6D5
+    eu-north-1:
+      NLBHostedZoneId: Z1UDT6IFJ4EJM
+    me-south-1:
+      NLBHostedZoneId: Z3QSRYVP46NYYV
+    sa-east-1:
+      NLBHostedZoneId: ZTK26PT1VY4CU
+
+Resources:
+  # VPC and Network Configuration
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: '10.0.0.0/24'
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Ref ServerName
+
+  # VPC Flow Logs
+  FlowLogsRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: vpc-flow-logs.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'FlowLogsPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                  - 'logs:DescribeLogGroups'
+                  - 'logs:DescribeLogStreams'
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/vpc/flowlogs/*'
+
+  FlowLogsGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub '/aws/vpc/flowlogs/${AWS::StackName}'
+      RetentionInDays: 30
+
+  VPCFlowLog:
+    Type: 'AWS::EC2::FlowLog'
+    Properties:
+      DeliverLogsPermissionArn: !GetAtt FlowLogsRole.Arn
+      LogGroupName: !Ref FlowLogsGroup
+      ResourceId: !Ref VPC
+      ResourceType: VPC
+      TrafficType: ALL
+
+  # Internet Gateway
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-igw'
+
+  AttachGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # NAT Gateway
+  NatGatewayEIP:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-nat'
+
+  # Subnets
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: '10.0.0.0/26'
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-public-1'
+
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: '10.0.0.64/26'
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-public-2'
+
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: '10.0.0.128/26'
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-private-1'
+
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: '10.0.0.192/26'
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-private-2'
+
+  # Route Tables
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-public-rt'
+
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-private-rt'
+
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+
+  PrivateRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NatGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  # Network ACLs
+  PublicNACL:
+    Type: 'AWS::EC2::NetworkAcl'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-public-nacl'
+
+  PrivateNACL:
+    Type: 'AWS::EC2::NetworkAcl'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-private-nacl'
+
+  # Public NACL Rules
+  PublicNACLIngressMinecraft:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref PublicNACL
+      RuleNumber: 100
+      Protocol: 6
+      RuleAction: allow
+      Egress: false
+      CidrBlock: '0.0.0.0/0'
+      PortRange:
+        From: !Ref MinecraftPort
+        To: !Ref MinecraftPort
+
+  PublicNACLIngressEphemeral:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref PublicNACL
+      RuleNumber: 200
+      Protocol: 6
+      RuleAction: allow
+      Egress: false
+      CidrBlock: '0.0.0.0/0'
+      PortRange:
+        From: 1024
+        To: 65535
+
+  PublicNACLEgressAll:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref PublicNACL
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: allow
+      Egress: true
+      CidrBlock: '0.0.0.0/0'
+
+  # Private NACL Rules
+  PrivateNACLIngressVPC:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref PrivateNACL
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: allow
+      Egress: false
+      CidrBlock: '10.0.0.0/24'
+
+  PrivateNACLEgressAll:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref PrivateNACL
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: allow
+      Egress: true
+      CidrBlock: '0.0.0.0/0'
+
+  PrivateNACLIngressHealthCheck:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref PrivateNACL
+      RuleNumber: 200
+      Protocol: 6
+      RuleAction: allow
+      Egress: false
+      CidrBlock: '10.0.0.0/24'
+      PortRange:
+        From: !Ref MinecraftPort
+        To: !Ref MinecraftPort
+
+  # NACL Associations
+  PublicSubnet1NACLAssociation:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      NetworkAclId: !Ref PublicNACL
+
+  PublicSubnet2NACLAssociation:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      NetworkAclId: !Ref PublicNACL
+
+  PrivateSubnet1NACLAssociation:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      NetworkAclId: !Ref PrivateNACL
+
+  PrivateSubnet2NACLAssociation:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      NetworkAclId: !Ref PrivateNACL
+
+  # Load Balancer Security Group
+  LoadBalancerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security group for NLB'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref MinecraftPort
+          ToPort: !Ref MinecraftPort
+          CidrIp: '0.0.0.0/0'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-alb-sg'
+
+  # DNS Record for Network Load Balancer
+  MinecraftDNSRecord:
+    Type: 'AWS::Route53::RecordSet'
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        # Get the canonical hosted zone ID for the NLB in the current region
+        HostedZoneId: !FindInMap
+          - RegionMap
+          - !Ref 'AWS::Region'
+          - NLBHostedZoneId
+        DNSName: !GetAtt NetworkLoadBalancer.DNSName
+        EvaluateTargetHealth: true
+
+  # ACM Certificate
+  Certificate:
+    Type: 'AWS::CertificateManager::Certificate'
+    Condition: ShouldCreateCertificate
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref DomainName
+          HostedZoneId: !Ref HostedZoneId
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-cert'
+
+  # Wait condition to ensure certificate is validated
+  CertificateValidationWaitCondition:
+    Type: 'AWS::CloudFormation::WaitCondition'
+    Condition: ShouldCreateCertificate
+    Properties:
+      Count: 1
+      Handle: !Ref CertificateValidationWaitHandle
+      Timeout: '2700' # 45 minutes
+
+  CertificateValidationWaitHandle:
+    Type: 'AWS::CloudFormation::WaitConditionHandle'
+    Condition: ShouldCreateCertificate
+
+  # Lambda function to signal certificate validation
+  CertificateValidationFunction:
+    Type: 'AWS::Lambda::Function'
+    Condition: ShouldCreateCertificate
+    Properties:
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt CertificateValidationRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import time
+
+          def handler(event, context):
+              if event['RequestType'] == 'Delete':
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                  return
+
+              acm = boto3.client('acm')
+              certificate_arn = event['ResourceProperties']['CertificateArn']
+              wait_handle = event['ResourceProperties']['WaitHandle']
+
+              try:
+                  # Wait for certificate validation
+                  while True:
+                      response = acm.describe_certificate(CertificateArn=certificate_arn)
+                      status = response['Certificate']['Status']
+
+                      if status == 'ISSUED':
+                          # Signal success
+                          boto3.client('cloudformation').signal_resource(
+                              StackName=event['StackId'].split('/')[1],
+                              LogicalResourceId='CertificateValidationWaitCondition',
+                              UniqueId='1',
+                              Status='SUCCESS'
+                          )
+                          break
+                      elif status == 'FAILED':
+                          raise Exception('Certificate validation failed')
+
+                      time.sleep(30)
+
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+              except Exception as e:
+                  print(f"Error: {str(e)}")
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {})
+      Timeout: 900 # 15 minutes
+
+  # IAM Role for Lambda
+  CertificateValidationRole:
+    Type: 'AWS::IAM::Role'
+    Condition: ShouldCreateCertificate
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: 'CertificateValidationPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'acm:DescribeCertificate'
+                Resource: !Ref Certificate
+              - Effect: Allow
+                Action:
+                  - 'cloudformation:SignalResource'
+                Resource: !Ref 'AWS::StackId'
+
+  # Custom resource to trigger certificate validation check
+  CertificateValidationTrigger:
+    Type: 'Custom::CertificateValidation'
+    Condition: ShouldCreateCertificate
+    Properties:
+      ServiceToken: !GetAtt CertificateValidationFunction.Arn
+      CertificateArn: !Ref Certificate
+      WaitHandle: !Ref CertificateValidationWaitHandle
+
+      # Network Load Balancer
+  NetworkLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Type: network
+      Scheme: internet-facing
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      LoadBalancerAttributes:
+        - Key: load_balancing.cross_zone.enabled
+          Value: !Ref EnableCrossZoneLoadBalancing
+        - Key: deletion_protection.enabled
+          Value: !Ref EnableDeletionProtection
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-nlb'
+
+  # Target Group
+  MinecraftTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Port: !Ref MinecraftPort
+      Protocol: TCP
+      VpcId: !Ref VPC
+      TargetType: ip
+      HealthCheckEnabled: true
+      HealthCheckPort: !Ref MinecraftPort
+      HealthCheckProtocol: TCP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 3
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-tg'
+
+  MinecraftListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: !Ref MinecraftPort
+      Protocol: TCP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref MinecraftTargetGroup
+
+  # VPC Endpoints for SSM
+  SSMEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssm'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      SecurityGroupIds:
+        - !Ref SSMSecurityGroup
+      PrivateDnsEnabled: true
+
+  SSMMessagesEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssmmessages'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      SecurityGroupIds:
+        - !Ref SSMSecurityGroup
+      PrivateDnsEnabled: true
+
+  EC2MessagesEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2messages'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      SecurityGroupIds:
+        - !Ref SSMSecurityGroup
+      PrivateDnsEnabled: true
+
+  # S3 Gateway Endpoint
+  S3Endpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref PrivateRouteTable
+
+  # EFS Configuration
+  FileSystem:
+    Type: 'AWS::EFS::FileSystem'
+    Properties:
+      PerformanceMode: generalPurpose
+      ThroughputMode: bursting
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub '${ServerName}-efs'
+
+  # EFS Mount Targets
+  MountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Ref PrivateSubnet1
+      SecurityGroups:
+        - !Ref EFSSecurityGroup
+
+  MountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Ref PrivateSubnet2
+      SecurityGroups:
+        - !Ref EFSSecurityGroup
+
+  # IAM Configuration
+  InstanceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+      Policies:
+        - PolicyName: 'MinecraftServerPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Sub 'arn:aws:s3:::${MinecraftBucket}'
+                  - !Sub 'arn:aws:s3:::${MinecraftBucket}/*'
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeInstances'
+                  - 'ec2:StopInstances'
+                  - 'ec2:CreateTags'  # Added for StopTime tag
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/aws:cloudformation:stack-name': !Ref 'AWS::StackName'
+              - Effect: Allow
+                Action:
+                  - 'cloudwatch:PutMetricData'  # Added for player count metrics
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    'cloudwatch:namespace': 'Minecraft'
+
+  InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: '/'
+      Roles:
+        - !Ref InstanceRole
+
+  # Security Groups
+  ServerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security group for Minecraft server'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref MinecraftPort
+          ToPort: !Ref MinecraftPort
+          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-server-sg'
+
+  EFSSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security group for EFS mount target'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !Ref ServerSecurityGroup
+
+  SSMSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security group for SSM endpoints'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref ServerSecurityGroup
+
+  # Launch Template
+  LaunchTemplate:
+    Type: 'AWS::EC2::LaunchTemplate'
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Ref AMI
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile:
+          Name: !Ref InstanceProfile
+        SecurityGroupIds:
+          - !Ref ServerSecurityGroup
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            Groups:
+              - !Ref ServerSecurityGroup
+            SubnetId: !Ref PrivateSubnet1
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            # Install required packages
+            dnf install -y aws-cli
+
+            # Download and run initialization script
+            aws s3 cp s3://${MinecraftBucket}/scripts/initialize_instance.sh /tmp/
+            chmod +x /tmp/initialize_instance.sh
+            /tmp/initialize_instance.sh "${FileSystem}" "${MinecraftBucket}" "${InactivityShutdownMinutes}" "${MinecraftPort}"
+
+
+  # Lambda for checking stopped instances and terminating if needed
+  StoppedInstanceCheckFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt StoppedInstanceCheckRole.Arn
+      Environment:
+        Variables:
+          TERMINATE_AFTER_DAYS: !Ref TerminateAfterDays
+      # cfn-lint: disable=W3002
+      Code: lambda/stopped_instance_check.py
+
+  StoppedInstanceCheckRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: 'MinecraftServerTerminate'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeInstances'
+                  - 'ec2:TerminateInstances'
+                Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+
+  # EventBridge Rules
+  StoppedInstanceCheckRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Description: 'Check for stopped instances to terminate'
+      ScheduleExpression: 'rate(1 day)'
+      State: 'ENABLED'
+      Targets:
+        - Arn: !GetAtt StoppedInstanceCheckFunction.Arn
+          Id: 'StoppedInstanceCheck'
+          RetryPolicy:
+            MaximumRetryAttempts: 2
+
+  # Lambda Permissions
+  StoppedInstanceCheckPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref StoppedInstanceCheckFunction
+      Principal: 'events.amazonaws.com'
+      SourceArn: !GetAtt StoppedInstanceCheckRule.Arn
+
+
+Outputs:
+  VPCId:
+    Description: 'VPC ID'
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-vpc-id'
+
+  PublicSubnet1Id:
+    Description: 'Public Subnet 1 ID'
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-public-subnet-1'
+
+  PublicSubnet2Id:
+    Description: 'Public Subnet 2 ID'
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-public-subnet-2'
+
+  PrivateSubnet1Id:
+    Description: 'Private Subnet 1 ID'
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-private-subnet-1'
+
+  PrivateSubnet2Id:
+    Description: 'Private Subnet 2 ID'
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-private-subnet-2'
+
+  FileSystemId:
+    Description: 'EFS File System ID'
+    Value: !Ref FileSystem
+    Export:
+      Name: !Sub '${AWS::StackName}-fs-id'
+
+  LaunchTemplateId:
+    Description: 'Launch Template ID'
+    Value: !Ref LaunchTemplate
+    Export:
+      Name: !Sub '${AWS::StackName}-lt-id'
+
+  LaunchTemplateVersion:
+    Description: 'Launch Template Version'
+    Value: !GetAtt LaunchTemplate.LatestVersionNumber
+    Export:
+      Name: !Sub '${AWS::StackName}-lt-version'
+
+  MinecraftEndpoint:
+    Description: 'Minecraft Server Endpoint'
+    Value: !Sub '${NetworkLoadBalancer.DNSName}:${MinecraftPort}'
+    Export:
+      Name: !Sub '${AWS::StackName}-minecraft-endpoint'
