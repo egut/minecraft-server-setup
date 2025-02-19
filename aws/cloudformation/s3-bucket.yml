@@ -1,3 +1,4 @@
+---
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Creates a secure S3 bucket for Minecraft server configuration and artifacts'
 
@@ -38,6 +39,11 @@ Resources:
     Type: 'AWS::S3::Bucket'
     DeletionPolicy: 'Delete'
     UpdateReplacePolicy: 'Retain'
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_18
+            comment: "Access logs bucket does not require its own access logging to avoid recursive logging"
     Properties:
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
