@@ -1,0 +1,61 @@
+---
+name: Static Code Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint Code Base
+    runs-on: ubuntu-latest
+    # trunk-ignore(checkov/CKV2_GHA_1)
+    permissions:
+      contents: read
+      statuses: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+        with:
+          # Full git history is needed to get a proper list of changed files
+          fetch-depth: 0
+
+
+      - name: Super-Linter
+        uses: super-linter/super-linter@v5
+
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          DEFAULT_BRANCH: ${{ github.event.pull_request.base.ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # Set base path for all config files
+          LINTER_RULES_PATH: .trunk/config
+
+
+          # Match trunk.yaml linters
+          VALIDATE_PYTHON_BANDIT: true
+          VALIDATE_PYTHON_BLACK: true
+          VALIDATE_YAML_CFNLINT: true
+          VALIDATE_CHECKOV: true
+          VALIDATE_ENV: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_PYTHON_ISORT: true
+          VALIDATE_PRETTIER: true
+          VALIDATE_PYTHON_RUFF: true
+          VALIDATE_SHELL_SHFMT: true
+          VALIDATE_YAML: true
+
+          # Linter configs to match trunk
+          # PYTHON_BLACK_CONFIG_FILE: pyproject.toml
+          # PYTHON_ISORT_CONFIG_FILE: pyproject.toml
+          # PYTHON_RUFF_CONFIG_FILE: pyproject.toml
+
+          # Python version to match trunk runtime
+          PYTHON_VERSION: 3.10.8
+          NODE_VERSION: 18.20.5

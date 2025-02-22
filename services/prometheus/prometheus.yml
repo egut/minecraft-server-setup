@@ -12,6 +12,10 @@ scrape_configs:
       - targets:
           - 'minecraft:25585'
 
+  - job_name: 'minecraft_prometheus'
+    static_configs:
+      - targets:
+          - 'minecraft:19565'
 
   - job_name: 'minecraft_server'
     static_configs:

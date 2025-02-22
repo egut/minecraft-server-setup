@@ -1,0 +1,431 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Deploy configuration and handling of the Minecraft server'
+
+Parameters:
+
+  ServerName:
+    Type: 'String'
+    Description: 'Name of the Minecraft server'
+    Default: 'minecraft-server'
+
+  MinecraftBucket:
+    Type: String
+    Description: 'S3 bucket for Minecraft artifacts'
+
+  MinecraftPort:
+    Type: Number
+    Description: 'Port number for Minecraft server'
+    Default: 25565
+    MinValue: 1024
+    MaxValue: 65535
+    ConstraintDescription: 'Must be a valid port number between 1024 and 65535'
+
+  InactivityShutdownMinutes:
+    Type: Number
+    Description: 'Minutes of inactivity before stopping the instance'
+    Default: 30
+    MinValue: 5
+    MaxValue: 1440
+
+  # TerminateAfterDays:
+  #   Type: Number
+  #   Description: 'Days of being stopped before terminating the instance'
+  #   Default: 7
+  #   MinValue: 1
+  #   MaxValue: 30
+
+  InstanceType:
+    Type: String
+    Description: 'EC2 instance type'
+    Default: 't4g.small'
+    AllowedValues:
+      - 't4g.small'
+      - 't4g.medium'
+      - 't4g.large'
+      - 't4g.xlarge'
+      - 't4g.2xlarge'
+
+  AMI:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64'
+    Description: 'Amazon Linux 2023 ARM64 AMI ID'
+
+Resources:
+  # Security Groups
+  NetworkLoadBalancerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security group for Load Balancer'
+      VpcId:
+        Fn::ImportValue: !Sub '${ServerName}-vpc-id'
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: '0.0.0.0/0'
+          Description: 'Allow all outbound traffic for health checks'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-NLB-SecurityGroup'
+
+  MinecraftServerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security group for Minecraft server'
+      VpcId:
+        Fn::ImportValue: !Sub '${ServerName}-vpc-id'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub '${ServerName}-ssm-security-group'
+          Description: 'Allow HTTPS inbound for SSM connection'
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: '0.0.0.0/0'
+          Description: 'Allow all outbound traffic'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-Minecraft-SecurityGroup'
+
+  EFSSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security group for EFS mount target'
+      VpcId:
+        Fn::ImportValue: !Sub '${ServerName}-vpc-id'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-EFS-SecurityGroup'
+
+  # Time Sync Service egress rule for Minecraft Server
+  MinecraftToTimeSyncEgress:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !Ref MinecraftServerSecurityGroup
+      IpProtocol: udp
+      FromPort: 123
+      ToPort: 123
+      CidrIp: '169.254.169.123/32'
+      Description: 'Allow NTP outbound to AWS Time Sync Service'
+
+  # Time Sync Service ingress rule for Minecraft Server
+  MinecraftFromTimeSyncIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref MinecraftServerSecurityGroup
+      IpProtocol: udp
+      FromPort: 123
+      ToPort: 123
+      CidrIp: '169.254.169.123/32'
+      Description: 'Allow NTP inbound from AWS Time Sync Service'
+
+  # EFS to Minecraft Server rules
+  EFSFromMinecraftNFSIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref EFSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 2049
+      ToPort: 2049
+      SourceSecurityGroupId: !Ref MinecraftServerSecurityGroup
+      Description: 'Allow NFS inbound from Minecraft server'
+
+  # Mount helper ports (TCP and UDP)
+  EFSFromMinecraftMountHelperTCPIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref EFSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 988
+      ToPort: 988
+      SourceSecurityGroupId: !Ref MinecraftServerSecurityGroup
+      Description: 'Allow mount helper TCP inbound from Minecraft server'
+
+  EFSFromMinecraftMountHelperUDPIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref EFSSecurityGroup
+      IpProtocol: udp
+      FromPort: 988
+      ToPort: 988
+      SourceSecurityGroupId: !Ref MinecraftServerSecurityGroup
+      Description: 'Allow mount helper UDP inbound from Minecraft server'
+
+  # Minecraft Server to EFS rules
+  MinecraftToEFSNFSEgress:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !Ref MinecraftServerSecurityGroup
+      IpProtocol: tcp
+      FromPort: 2049
+      ToPort: 2049
+      DestinationSecurityGroupId: !Ref EFSSecurityGroup
+      Description: 'Allow NFS outbound to EFS'
+
+  MinecraftToEFSMountHelperTCPEgress:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !Ref MinecraftServerSecurityGroup
+      IpProtocol: tcp
+      FromPort: 988
+      ToPort: 988
+      DestinationSecurityGroupId: !Ref EFSSecurityGroup
+      Description: 'Allow mount helper TCP outbound to EFS'
+
+  MinecraftToEFSMountHelperUDPEgress:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !Ref MinecraftServerSecurityGroup
+      IpProtocol: udp
+      FromPort: 988
+      ToPort: 988
+      DestinationSecurityGroupId: !Ref EFSSecurityGroup
+      Description: 'Allow mount helper UDP outbound to EFS'
+
+  # Separate Security Group Rules
+  NetworkLoadBalancerToMinecraftEgress:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !Ref  NetworkLoadBalancerSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref MinecraftPort
+      ToPort: !Ref MinecraftPort
+      DestinationSecurityGroupId: !Ref MinecraftServerSecurityGroup
+      Description: !Sub 'Allow outbound traffic to Minecraft server on port ${MinecraftPort}'
+
+  MinecraftFromLoadBalancerIngress:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref MinecraftServerSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref MinecraftPort
+      ToPort: !Ref MinecraftPort
+      SourceSecurityGroupId: !Ref  NetworkLoadBalancerSecurityGroup
+      Description: !Sub 'Allow Minecraft traffic from Load Balancer on port ${MinecraftPort}'
+
+  # S3 Bucket for NLB Access Logs
+  LoadBalancerLogsBucket:
+    Type: 'AWS::S3::Bucket'
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_18
+            comment: "Access logs bucket does not require its own access logging to avoid recursive logging"
+    Properties:
+      BucketName: !Sub '${ServerName}-nlb-logs-${AWS::AccountId}-${AWS::Region}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldLogs
+            Status: Enabled
+            ExpirationInDays: 90
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-nlb-logs'
+
+  # Bucket Policy for NLB Access Logs
+  LoadBalancerLogsBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref LoadBalancerLogsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowNLBAccessLogs
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action: 's3:PutObject'
+            Resource: !Sub '${LoadBalancerLogsBucket.Arn}/*'
+          - Sid: AllowSSLRequestsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt LoadBalancerLogsBucket.Arn
+              - !Sub '${LoadBalancerLogsBucket.Arn}/*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': false
+
+  NetworkLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Type: network
+      Scheme: internet-facing
+      Subnets: !Split
+        - ','
+        - Fn::ImportValue: !Sub '${ServerName}-public-subnets'
+      LoadBalancerAttributes:
+        - Key: load_balancing.cross_zone.enabled
+          Value: true
+        - Key: deletion_protection.enabled
+          Value: false
+        - Key: access_logs.s3.enabled
+          Value: true
+        - Key: access_logs.s3.bucket
+          Value: !Ref LoadBalancerLogsBucket
+        - Key: access_logs.s3.prefix
+          Value: !Sub '${ServerName}-nlb-logs'
+      Tags:
+        - Key: 'Name'
+          Value: !Sub '${ServerName}-NLB'
+
+  MinecraftTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Port: !Ref MinecraftPort
+      Protocol: TCP
+      VpcId:
+        Fn::ImportValue: !Sub '${ServerName}-vpc-id'
+      TargetType: ip
+      HealthCheckEnabled: true
+      HealthCheckPort: !Ref MinecraftPort
+      HealthCheckProtocol: TCP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 3
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ServerName}-TargetGroup'
+
+  MinecraftListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: !Ref MinecraftPort
+      Protocol: TCP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref MinecraftTargetGroup
+
+  # EFS Configuration
+  FileSystem:
+    Type: 'AWS::EFS::FileSystem'
+    DeletionPolicy: 'Delete'
+    UpdateReplacePolicy: 'Retain'
+    Properties:
+      PerformanceMode: generalPurpose
+      ThroughputMode: bursting
+      Encrypted: true
+      KmsKeyId: !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/elasticfilesystem'
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub '${ServerName}-EFS'
+
+  # EFS Mount Targets
+  MountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Select
+        - 0
+        - !Split
+          - ','
+          - Fn::ImportValue: !Sub '${ServerName}-private-subnets'
+      SecurityGroups:
+        - !Ref EFSSecurityGroup
+
+  MountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Select
+        - 1
+        - !Split
+          - ','
+          - Fn::ImportValue: !Sub '${ServerName}-private-subnets'
+      SecurityGroups:
+        - !Ref EFSSecurityGroup
+
+  # IAM Configuration
+  InstanceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+      Policies:
+        - PolicyName: 'MinecraftServerPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${MinecraftBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${MinecraftBucket}/*'
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeInstances'
+                  - 'ec2:StopInstances'
+                  - 'ec2:CreateTags'
+                Resource: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                Condition:
+                  StringEquals:
+                    'aws:RequestTag/Name': !Sub '${ServerName}-*'
+              - Effect: Allow
+                Action:
+                  - 'cloudwatch:PutMetricData'
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    'cloudwatch:namespace': 'Minecraft'
+
+  InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: '/'
+      Roles:
+        - !Ref InstanceRole
+
+  # Launch Template
+  LaunchTemplate:
+    Type: 'AWS::EC2::LaunchTemplate'
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Ref AMI
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile:
+          Name: !Ref InstanceProfile
+        SecurityGroupIds:
+          - !Ref MinecraftServerSecurityGroup
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpTokens: required
+          HttpPutResponseHopLimit: 1
+        InstanceMarketOptions:
+          MarketType: spot
+          SpotOptions:
+            SpotInstanceType: one-time
+            InstanceInterruptionBehavior: terminate
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            # Install required packages
+            dnf install -y aws-cli
+
+            # Download and run initialization script
+            aws s3 cp s3://${MinecraftBucket}/scripts/initialize_instance.sh /tmp/
+            chmod +x /tmp/initialize_instance.sh
+            /tmp/initialize_instance.sh "${FileSystem}" "${MinecraftBucket}" "${InactivityShutdownMinutes}" "${MinecraftPort}"
+

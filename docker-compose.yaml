@@ -19,6 +19,7 @@ services:
       - '25565:25565'
     #  - '24454:24454/udp'
     environment:
+      CF_API_KEY: '$$2a$$10$$z5MAQHO9wcAfcl8DQ0CguegNoILh2D/xeAqFwQjjNuCwJHB8ik3bq'
       DIFFICULTY: 'hard'
       ENABLE_JMX: 'TRUE'
       ENABLE_ROLLING_LOGS: 'TRUE'
@@ -26,20 +27,24 @@ services:
       EULA: "TRUE"
       INIT_MEMORY: '1G'
       MAX_MEMORY: '8G'
-      MODRINTH_LOADER: 'FABRIC'
-      MODRINTH_PROJECT: 'allexio-create+'
-      MODRINTH_VERSION: '1.0.0'
-      MOTD: "Allexio's Create Plus"
+      TYPE: 'AUTO_CURSEFORGE'
+      CF_SLUG: 'forge-frontier'
+      CF_PAGE_URL: 'https://www.curseforge.com/minecraft/modpacks/forge-frontier/'
+      # TYPE: 'MODRINTH'
+      # MODRINTH_LOADER: 'FABRIC'
+      # MODRINTH_PROJECT: 'allexio-create+'
+      # MODRINTH_VERSION: '1.0.0'
+      MOTD: "Create - Forge Frontier 2.1.1"
       OPS: "egut"
       SEED: '-6337350249272507649'
-      SERVER_NAME: "Allexio's Create Plus"
+      SERVER_NAME: "Rubik Create"
       SERVER_PORT: 25565
       SIMULATION_DISTANCE: 16
-      TYPE: 'MODRINTH'
       USE_AIKAR_FLAGS: 'TRUE'
       VANILLATWEAKS_SHARECODE: 'ilFuDN'
       VERSION: "1.20.1"
       VIEW_DISTANCE: 24
+
     tty: true
     stdin_open: true
     restart: 'unless-stopped'
@@ -237,7 +242,7 @@ services:
 
     depends_on:
       - 'grafana'
-      - 'bluemap'
+      # - 'bluemap'
 
     networks:
       - 'web'
