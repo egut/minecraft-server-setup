@@ -48,9 +48,9 @@ jobs:
           VALIDATE_YAML: true
 
           # Linter configs to match trunk
-          PYTHON_BLACK_CONFIG_FILE: pyproject.toml
-          PYTHON_ISORT_CONFIG_FILE: pyproject.toml
-          PYTHON_RUFF_CONFIG_FILE: pyproject.toml
+          # PYTHON_BLACK_CONFIG_FILE: pyproject.toml
+          # PYTHON_ISORT_CONFIG_FILE: pyproject.toml
+          # PYTHON_RUFF_CONFIG_FILE: pyproject.toml
 
           # Python version to match trunk runtime
           PYTHON_VERSION: 3.10.8
