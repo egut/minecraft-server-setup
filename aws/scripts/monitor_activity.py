@@ -13,38 +13,45 @@ The script:
 - Logs all activities for monitoring
 """
 
-import os
-import time
 import logging
+import sys
+import time
 from datetime import datetime, timezone
-import json
-import requests
+
 import boto3
-from botocore.exceptions import BotoCoreError, ClientError
-from mcrcon import MCRcon, MCRconException
+import requests
+from botocore.exceptions import ClientError
+
+# pylint: disable=import-error
+from mcrcon import MCRcon, MCRconException  # type: ignore
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler('/var/log/minecraft/activity_monitor.log'),
-        logging.StreamHandler()
-    ]
+        logging.FileHandler("/var/log/minecraft/activity_monitor.log"),
+        logging.StreamHandler(),
+    ],
 )
 logger = logging.getLogger(__name__)
+
 
 class MinecraftMonitorError(Exception):
     """Base exception for Minecraft monitoring errors."""
 
+
 class ConfigurationError(MinecraftMonitorError):
     """Configuration related errors."""
+
 
 class MetadataError(MinecraftMonitorError):
     """EC2 metadata service errors."""
 
+
 class RCONError(MinecraftMonitorError):
     """RCON communication errors."""
+
 
 def get_instance_metadata():
     """
@@ -56,25 +63,21 @@ def get_instance_metadata():
     Raises:
         MetadataError: If metadata retrieval fails
     """
+    # trunk-ignore(bandit/B105)
     token_url = "http://169.254.169.254/latest/api/token"
     token_headers = {"X-aws-ec2-metadata-token-ttl-seconds": "21600"}
     metadata_url = "http://169.254.169.254/latest/dynamic/instance-identity/document"
 
     try:
-        token = requests.put(
-            token_url,
-            headers=token_headers,
-            timeout=2
-        ).text
+        token = requests.put(token_url, headers=token_headers, timeout=2).text
 
         response = requests.get(
-            metadata_url,
-            headers={"X-aws-ec2-metadata-token": token},
-            timeout=2
+            metadata_url, headers={"X-aws-ec2-metadata-token": token}, timeout=2
         )
         return response.json()
     except requests.RequestException as err:
         raise MetadataError(f"Failed to get instance metadata: {err}") from err
+
 
 def load_environment_config(env_file):
     """
@@ -91,21 +94,24 @@ def load_environment_config(env_file):
     """
     config = {}
     try:
-        with open(env_file, encoding='utf-8') as file:
+        with open(env_file, encoding="utf-8") as file:
             for line in file:
                 line = line.strip()
-                if line and not line.startswith('#'):
-                    key, value = line.split('=', 1)
+                if line and not line.startswith("#"):
+                    key, value = line.split("=", 1)
                     config[key.strip()] = value.strip().strip("'\"")
 
-        required_keys = ['RCON_PASSWORD', 'INACTIVITY_SHUTDOWN_MINUTES']
+        required_keys = ["RCON_PASSWORD", "INACTIVITY_SHUTDOWN_MINUTES"]
         missing_keys = [key for key in required_keys if key not in config]
         if missing_keys:
-            raise ConfigurationError(f"Missing required configuration: {', '.join(missing_keys)}")
+            raise ConfigurationError(
+                f"Missing required configuration: {', '.join(missing_keys)}"
+            )
 
         return config
     except (OSError, ValueError) as err:
         raise ConfigurationError(f"Failed to load configuration: {err}") from err
+
 
 def get_player_count(rcon_password):
     """
@@ -128,6 +134,7 @@ def get_player_count(rcon_password):
     except (MCRconException, ValueError, IndexError) as err:
         raise RCONError(f"Failed to get player count: {err}") from err
 
+
 def put_cloudwatch_metric(cloudwatch, instance_id, player_count):
     """
     Put player count metric to CloudWatch.
@@ -142,19 +149,20 @@ def put_cloudwatch_metric(cloudwatch, instance_id, player_count):
     """
     try:
         cloudwatch.put_metric_data(
-            Namespace='Minecraft',
-            MetricData=[{
-                'MetricName': 'PlayerCount',
-                'Value': player_count,
-                'Unit': 'Count',
-                'Dimensions': [
-                    {'Name': 'InstanceId', 'Value': instance_id}
-                ]
-            }]
+            Namespace="Minecraft",
+            MetricData=[
+                {
+                    "MetricName": "PlayerCount",
+                    "Value": player_count,
+                    "Unit": "Count",
+                    "Dimensions": [{"Name": "InstanceId", "Value": instance_id}],
+                }
+            ],
         )
     except ClientError as err:
         logger.error("Failed to put CloudWatch metric: %s", err)
         raise
+
 
 def stop_instance(ec2_client, instance_id):
     """
@@ -171,10 +179,7 @@ def stop_instance(ec2_client, instance_id):
         # Tag instance with stop time
         ec2_client.create_tags(
             Resources=[instance_id],
-            Tags=[{
-                'Key': 'StopTime',
-                'Value': datetime.now(timezone.utc).isoformat()
-            }]
+            Tags=[{"Key": "StopTime", "Value": datetime.now(timezone.utc).isoformat()}],
         )
         # Stop the instance
         ec2_client.stop_instances(InstanceIds=[instance_id])
@@ -182,6 +187,7 @@ def stop_instance(ec2_client, instance_id):
     except ClientError as err:
         logger.error("Failed to stop instance: %s", err)
         raise
+
 
 def main():
     """
@@ -192,18 +198,18 @@ def main():
     try:
         # Get instance metadata
         metadata = get_instance_metadata()
-        instance_id = metadata['instanceId']
-        region = metadata['region']
+        instance_id = metadata["instanceId"]
+        region = metadata["region"]
 
         # Configure AWS clients
         boto3.setup_default_session(region_name=region)
-        ec2 = boto3.client('ec2')
-        cloudwatch = boto3.client('cloudwatch')
+        ec2 = boto3.client("ec2")
+        cloudwatch = boto3.client("cloudwatch")
 
         # Load configuration
-        config = load_environment_config('/efs/.env')
-        inactivity_timeout = int(config['INACTIVITY_SHUTDOWN_MINUTES'])
-        rcon_password = config['RCON_PASSWORD']
+        config = load_environment_config("/efs/.env")
+        inactivity_timeout = int(config["INACTIVITY_SHUTDOWN_MINUTES"])
+        rcon_password = config["RCON_PASSWORD"]
 
         last_active_time = datetime.now(timezone.utc)
 
@@ -222,16 +228,17 @@ def main():
                     last_active_time = current_time
                     logger.info("Active players: %d", players)
                 else:
-                    inactive_minutes = (current_time - last_active_time).total_seconds() / 60
+                    inactive_minutes = (
+                        current_time - last_active_time
+                    ).total_seconds() / 60
                     logger.info(
-                        "No players online. Inactive for %.1f minutes",
-                        inactive_minutes
+                        "No players online. Inactive for %.1f minutes", inactive_minutes
                     )
 
                     if inactive_minutes >= inactivity_timeout:
                         logger.info(
                             "Inactivity timeout (%d minutes) reached",
-                            inactivity_timeout
+                            inactivity_timeout,
                         )
                         stop_instance(ec2, instance_id)
                         break
@@ -251,5 +258,6 @@ def main():
 
     return 0
 
+
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())

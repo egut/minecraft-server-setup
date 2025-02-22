@@ -28,12 +28,12 @@ Parameters:
     MinValue: 5
     MaxValue: 1440
 
-  TerminateAfterDays:
-    Type: Number
-    Description: 'Days of being stopped before terminating the instance'
-    Default: 7
-    MinValue: 1
-    MaxValue: 30
+  # TerminateAfterDays:
+  #   Type: Number
+  #   Description: 'Days of being stopped before terminating the instance'
+  #   Default: 7
+  #   MinValue: 1
+  #   MaxValue: 30
 
   InstanceType:
     Type: String

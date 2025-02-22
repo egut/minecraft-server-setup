@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap'); /*font-family: 'Inter', sans-serif;*/
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"); /*font-family: 'Inter', sans-serif;*/
 
 * {
   margin: 0;
@@ -8,14 +8,14 @@
 }
 
 :root {
-  --main-font: 'Inter', sans-serif;
-  --main-color: #39BEFF;
-  --background-color: #24272B;
-  --white-color: #FFFFFF;
+  --main-font: "Inter", sans-serif;
+  --main-color: #39beff;
+  --background-color: #24272b;
+  --white-color: #ffffff;
   --black-color: #000000;
-  --description-color: #D2D0D0;
+  --description-color: #d2d0d0;
 
-  --green-color: #4AFF6B;
+  --green-color: #4aff6b;
   --ip-copied-background: rgba(74, 255, 107, 0.17);
   --ip-copied-icon-background: rgba(74, 255, 107, 0.5);
 
@@ -25,12 +25,12 @@
   --stat-icon-background-2: rgba(57, 190, 255, 0.5);
 
   --scroll-bar: rgba(210, 208, 208, 0.3);
-  --scroll-bar-hover: #555555FF;
+  --scroll-bar-hover: #555555ff;
 
-  --red-color: #FF7C7C;
+  --red-color: #ff7c7c;
   --warning-background: rgba(255, 124, 124, 0.17);
   --warning-icon-background: rgba(255, 124, 124, 0.5);
-  --warning-color: #F5C1C1;
+  --warning-color: #f5c1c1;
 
   /*Admin-Team rank colors*/
   --default-rank-color: rgba(210, 208, 208, 0.3);

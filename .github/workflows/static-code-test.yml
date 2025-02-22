@@ -1,3 +1,4 @@
+---
 name: Static Code Tests
 
 on:
@@ -11,20 +12,23 @@ jobs:
   lint:
     name: Lint Code Base
     runs-on: ubuntu-latest
+    # trunk-ignore(checkov/CKV2_GHA_1)
     permissions:
       contents: read
-      packages: read
       statuses: write
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
         with:
           # Full git history is needed to get a proper list of changed files
           fetch-depth: 0
 
+
       - name: Super-Linter
         uses: super-linter/super-linter@v5
+
         env:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: ${{ github.event.pull_request.base.ref }}

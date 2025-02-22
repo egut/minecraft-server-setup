@@ -18,7 +18,7 @@
 #   4 - Environment setup failure
 
 # Enable strict error handling
-set -euo pipefail
+set -uo pipefail
 IFS=$'\n\t'
 
 #######################################
@@ -27,7 +27,7 @@ IFS=$'\n\t'
 #   $1 - Error message
 #######################################
 error() {
-    echo "ERROR: $1" >&2
+	echo "ERROR: ${1}" >&2
 }
 
 #######################################
@@ -36,7 +36,7 @@ error() {
 #   $1 - Info message
 #######################################
 info() {
-    echo "INFO: $1"
+	echo "INFO: ${1}" >&2
 }
 
 #######################################
@@ -49,11 +49,11 @@ info() {
 #   0 if valid, 1 if invalid
 #######################################
 validate_inputs() {
-    if [ $# -lt 4 ]; then
-        error "Missing required arguments"
-        echo "Usage: $0 <efs-id> <minecraft-bucket> <inactivity-timeout> <minecraft-port>" >&2
-        return 1
-    fi
+	if [[ $# -lt 4 ]]; then
+		error "Missing required arguments"
+		echo "Usage: ${0} <efs-id> <minecraft-bucket> <inactivity-timeout> <minecraft-port>" >&2
+		return 1
+	fi
 }
 
 #######################################
@@ -65,32 +65,28 @@ validate_inputs() {
 #   0 if successful, 2 if failed
 #######################################
 mount_efs() {
-    local mount_point="$1"
-    local fs_id="$2"
+	local mount_point="${1}"
+	local fs_id="${2}"
 
-    info "Mounting EFS filesystem ${fs_id} at ${mount_point}"
+	info "Mounting EFS filesystem ${fs_id} at ${mount_point}"
 
-    # Ensure mount point exists
-    mkdir -p "${mount_point}"
+	mkdir -p "${mount_point}"
 
-    # Check if already mounted
-    if mountpoint -q "${mount_point}"; then
-        info "EFS already mounted at ${mount_point}"
-        return 0
-    fi
+	if mountpoint -q "${mount_point}"; then
+		info "EFS already mounted at ${mount_point}"
+		return 0
+	fi
 
-    # Attempt to mount
-    if ! mount -t efs "${fs_id}:/" "${mount_point}"; then
-        error "Failed to mount EFS at ${mount_point}"
-        return 2
-    fi
+	if ! mount -t efs "${fs_id}:/" "${mount_point}"; then
+		error "Failed to mount EFS at ${mount_point}"
+		return 2
+	fi
 
-    info "Successfully mounted EFS at ${mount_point}"
+	info "Successfully mounted EFS at ${mount_point}"
 
-    # Ensure EFS mounts on reboot
-    if ! grep -q "${fs_id}" /etc/fstab; then
-        echo "${fs_id}:/ ${mount_point} efs defaults,_netdev 0 0" >> /etc/fstab
-    fi
+	if ! grep -q "${fs_id}" /etc/fstab; then
+		echo "${fs_id}:/ ${mount_point} efs defaults,_netdev 0 0" >>/etc/fstab
+	fi
 }
 
 #######################################
@@ -99,31 +95,31 @@ mount_efs() {
 #   0 if successful, 3 if failed
 #######################################
 setup_docker() {
-    info "Setting up Docker and dependencies"
+	info "Setting up Docker and dependencies"
 
-    # Install required packages
-    if ! dnf install -y amazon-efs-utils docker; then
-        error "Failed to install required packages"
-        return 3
-    fi
+	# Install required packages
+	if ! dnf install -y amazon-efs-utils docker; then
+		error "Failed to install required packages"
+		return 3
+	fi
 
-    # Install Docker Compose if not present
-    if [ ! -f /usr/local/bin/docker-compose ]; then
-        info "Installing Docker Compose"
-        if ! curl -L "https://github.com/docker/compose/releases/download/v2.20.3/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose; then
-            error "Failed to download Docker Compose"
-            return 3
-        fi
-        chmod +x /usr/local/bin/docker-compose
-    fi
+	# Install Docker Compose if not present
+	if [[ ! -f /usr/local/bin/docker-compose ]]; then
+		info "Installing Docker Compose"
+		if ! curl -L "https://github.com/docker/compose/releases/download/v2.20.3/docker-compose-linux-aarch64" -o /usr/local/bin/docker-compose; then
+			error "Failed to download Docker Compose"
+			return 3
+		fi
+		chmod +x /usr/local/bin/docker-compose
+	fi
 
-    # Enable and start Docker
-    if ! systemctl enable docker && systemctl start docker; then
-        error "Failed to enable and start Docker"
-        return 3
-    fi
+	# Enable and start Docker
+	if ! systemctl enable docker && systemctl start docker; then
+		error "Failed to enable and start Docker"
+		return 3
+	fi
 
-    info "Docker setup completed successfully"
+	info "Docker setup completed successfully"
 }
 
 #######################################
@@ -137,118 +133,111 @@ setup_docker() {
 #   0 if successful, 4 if failed
 #######################################
 setup_environment() {
-    local efs_mount="$1"
-    local minecraft_bucket="$2"
-    local inactivity_minutes="$3"
-    local minecraft_port="$4"
+	local efs_mount="${1}"
+	local minecraft_bucket="${2}"
+	local inactivity_minutes="${3}"
+	local minecraft_port="${4}"
 
-    info "Setting up environment configuration"
+	info "Setting up environment configuration"
 
-    # Generate environment file
-    if [ ! -f "${efs_mount}/.env" ]; then
-        info "Generating new configuration"
-        local RCON_PASSWORD
-        RCON_PASSWORD=$(openssl rand -base64 12)
-        if ! cat > "${efs_mount}/.env" << EOF ; then
+	if [[ ! -f "${efs_mount}/.env" ]]; then
+		info "Generating new configuration"
+		local RCON_PASSWORD
+		RCON_PASSWORD=$(openssl rand -base64 12)
+		if ! cat >"${efs_mount}/.env" <<EOF; then
 RCON_PASSWORD='${RCON_PASSWORD}'
 INACTIVITY_SHUTDOWN_MINUTES='${inactivity_minutes}'
 MINECRAFT_PORT='${minecraft_port}'
 EOF
-            error "Failed to create .env file"
-            return 4
-        fi
-    fi
+			error "Failed to create .env file"
+			return 4
+		fi
+	fi
 
-    # Download or update docker-compose.yml
-    local compose_etag_file="${efs_mount}/.docker-compose.etag"
-    local s3_etag
+	# Download or update docker-compose.yml
+	local compose_etag_file="${efs_mount}/.docker-compose.etag"
+	local s3_etag
 
-    # Get the ETag of the S3 object
-    if ! s3_etag=$(aws s3api head-object \
-        --bucket "${minecraft_bucket}" \
-        --key "docker-compose.yml" \
-        --query 'ETag' \
-        --output text 2>/dev/null); then
-        error "Failed to get ETag for docker-compose.yml"
-        return 4
-    fi
+	# Get the ETag of the S3 object
+	if ! s3_etag=$(aws s3api head-object \
+		--bucket "${minecraft_bucket}" \
+		--key "docker-compose.yml" \
+		--query 'ETag' \
+		--output text 2>/dev/null); then
+		error "Failed to get ETag for docker-compose.yml"
+		return 4
+	fi
 
-    # Remove quotes from ETag
-    s3_etag=$(echo "$s3_etag" | tr -d '"')
-    local current_etag=""
+	# Remove quotes from ETag
+	s3_etag=$(echo "${s3_etag}" | tr -d '"')
+	local current_etag=""
 
-    # Read current ETag if it exists
-    if [ -f "$compose_etag_file" ]; then
-        current_etag=$(cat "$compose_etag_file")
-    fi
+	# Read current ETag if it exists
+	if [[ -f ${compose_etag_file} ]]; then
+		current_etag=$(cat "${compose_etag_file}")
+	fi
 
-    # Download if file doesn't exist or ETag is different
-    if [ ! -f "${efs_mount}/docker-compose.yml" ] || [ "$current_etag" != "$s3_etag" ]; then
-        info "Downloading docker-compose.yml from S3"
-        if ! aws s3 cp "s3://${minecraft_bucket}/docker-compose.yml" "${efs_mount}/"; then
-            error "Failed to copy docker-compose.yml"
-            return 4
-        fi
-        # Store the new ETag
-        echo "$s3_etag" > "$compose_etag_file"
-        info "Updated docker-compose.yml with new version"
-    else
-        info "docker-compose.yml is up to date"
-    fi
+	# Download if file doesn't exist or ETag is different
+	if [[ ! -f "${efs_mount}/docker-compose.yml" ]] || [[ ${current_etag} != "${s3_etag}" ]]; then
+		info "Downloading docker-compose.yml from S3"
+		if ! aws s3 cp "s3://${minecraft_bucket}/docker-compose.yml" "${efs_mount}/"; then
+			error "Failed to copy docker-compose.yml"
+			return 4
+		fi
+		# Store the new ETag
+		echo "${s3_etag}" >"${compose_etag_file}"
+		info "Updated docker-compose.yml with new version"
+	else
+		info "docker-compose.yml is up to date"
+	fi
 
-    # Download or update scripts directory
-    local scripts_etag_file="${efs_mount}/.scripts.etag"
-    local scripts_etag
+	# Download or update scripts directory
+	local scripts_etag_file="${efs_mount}/.scripts.etag"
+	local scripts_etag
 
-    # Get the ETag of the scripts directory (using a manifest file or specific script)
-    if ! scripts_etag=$(aws s3api head-object \
-        --bucket "${minecraft_bucket}" \
-        --key "scripts/manifest.txt" \
-        --query 'ETag' \
-        --output text 2>/dev/null); then
-        error "Failed to get ETag for scripts manifest"
-        return 4
-    fi
+	# Get the ETag of the scripts directory (using a manifest file or specific script)
+	if ! scripts_etag=$(aws s3api head-object \
+		--bucket "${minecraft_bucket}" \
+		--key "scripts/manifest.txt" \
+		--query 'ETag' \
+		--output text 2>/dev/null); then
+		error "Failed to get ETag for scripts manifest"
+		return 4
+	fi
 
-    # Remove quotes from ETag
-    scripts_etag=$(echo "$scripts_etag" | tr -d '"')
-    local current_scripts_etag=""
+	# Remove quotes from ETag
+	scripts_etag=$(echo "${scripts_etag}" | tr -d '"')
+	local current_scripts_etag=""
 
-    # Read current scripts ETag if it exists
-    if [ -f "$scripts_etag_file" ]; then
-        current_scripts_etag=$(cat "$scripts_etag_file")
-    fi
+	# Read current scripts ETag if it exists
+	if [[ -f ${scripts_etag_file} ]]; then
+		current_scripts_etag=$(cat "${scripts_etag_file}")
+	fi
 
-    # Download if directory doesn't exist or ETag is different
-    if [ ! -d "${efs_mount}/scripts" ] || [ "$current_scripts_etag" != "$scripts_etag" ]; then
-        info "Downloading scripts from S3"
-        if ! aws s3 cp "s3://${minecraft_bucket}/scripts/" "${efs_mount}/scripts/" --recursive; then
-            error "Failed to copy scripts"
-            return 4
-        fi
-        # Make scripts executable
-        chmod +x "${efs_mount}/scripts/"*.py "${efs_mount}/scripts/"*.sh
-        # Store the new ETag
-        echo "$scripts_etag" > "$scripts_etag_file"
-        info "Updated scripts with new version"
-    else
-        info "Scripts are up to date"
-    fi
+	# Download if directory doesn't exist or ETag is different
+	if [[ ! -d "${efs_mount}/scripts" ]] || [[ ${current_scripts_etag} != "${scripts_etag}" ]]; then
+		info "Downloading scripts from S3"
+		if ! aws s3 cp "s3://${minecraft_bucket}/scripts/" "${efs_mount}/scripts/" --recursive; then
+			error "Failed to copy scripts"
+			return 4
+		fi
+		# Make scripts executable
+		chmod +x "${efs_mount}/scripts/"*.py "${efs_mount}/scripts/"*.sh
+		# Store the new ETag
+		echo "${scripts_etag}" >"${scripts_etag_file}"
+		info "Updated scripts with new version"
+	else
+		info "Scripts are up to date"
+	fi
 
-    info "Environment setup completed successfully"
+	info "Environment setup completed successfully"
 }
 
 setup_monitoring() {
-    local efs_mount="$1"
+	local efs_mount="${1}"
 
-    # Install mcrcon
-    pip3 install mcrcon boto3 requests
-
-    # Create log directory
-    mkdir -p /var/log/minecraft
-
-    # Create systemd service for monitoring
-    cat > /etc/systemd/system/minecraft-monitor.service << EOF
+	# Create systemd service for monitoring
+	cat >"/etc/systemd/system/minecraft-monitor.service" <<EOF
 [Unit]
 Description=Minecraft Server Activity Monitor
 After=docker.service
@@ -263,11 +252,9 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-    # Enable and start the service
-    systemctl enable minecraft-monitor
-    systemctl start minecraft-monitor
+	systemctl enable minecraft-monitor
+	systemctl start minecraft-monitor
 }
-
 
 #######################################
 # Main function
@@ -277,33 +264,33 @@ EOF
 #   0 if successful, non-zero on error
 #######################################
 main() {
-    local EFS_MOUNT="/efs"
+	local EFS_MOUNT="/efs"
 
-    # Validate inputs
-    validate_inputs "$@" || exit 1
+	# Validate inputs
+	validate_inputs "$@" || exit 1
 
-    local EFS_ID="$1"
-    local MINECRAFT_BUCKET="$2"
-    local INACTIVITY_SHUTDOWN_MINUTES="${3:-30}"  # Default to 30 if not provided
-    local MINECRAFT_PORT="$4"
+	local EFS_ID="${1}"
+	local MINECRAFT_BUCKET="${2}"
+	local INACTIVITY_SHUTDOWN_MINUTES="${3:-30}" # Default to 30 if not provided
+	local MINECRAFT_PORT="${4}"
 
-    # Setup system dependencies
-    setup_docker || exit 3
+	# Setup system dependencies
+	setup_docker || exit 3
 
-    # Mount EFS
-    mount_efs "${EFS_MOUNT}" "${EFS_ID}" || exit 2
+	# Mount EFS
+	mount_efs "${EFS_MOUNT}" "${EFS_ID}" || exit 2
 
-    # Setup environment and config
-    setup_environment "${EFS_MOUNT}" "${MINECRAFT_BUCKET}" "${INACTIVITY_MINUTES}" "${MINECRAFT_PORT}" || exit 4
+	# Setup environment and config
+	setup_environment "${EFS_MOUNT}" "${MINECRAFT_BUCKET}" "${INACTIVITY_SHUTDOWN_MINUTES}" "${MINECRAFT_PORT}" || exit 4
 
-    # Start services
-    info "Starting Docker services"
-    cd "${EFS_MOUNT}" && docker compose up -d
+	# Start services
+	info "Starting Docker services"
+	cd "${EFS_MOUNT}" && docker compose up -d
 
-    # Setup monitoring
-    setup_monitoring "${EFS_MOUNT}" || exit 5
+	# Setup monitoring
+	setup_monitoring "${EFS_MOUNT}" || exit 5
 
-    info "Instance initialization completed successfully"
+	info "Instance initialization completed successfully"
 }
 
 # Execute main function with all command line arguments

@@ -10,9 +10,10 @@ Environment Variables:
     TERMINATE_AFTER_DAYS (int): Number of days after which a stopped instance should be terminated
 """
 
-import os
 import logging
+import os
 from datetime import datetime, timezone
+
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
@@ -20,8 +21,10 @@ from botocore.exceptions import BotoCoreError, ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+
 class InstanceTerminationError(Exception):
     """Custom exception for instance termination failures."""
+
 
 def get_stop_time_from_tags(tags):
     """
@@ -37,13 +40,14 @@ def get_stop_time_from_tags(tags):
         return None
 
     for tag in tags:
-        if tag['Key'] == 'StopTime':
+        if tag["Key"] == "StopTime":
             try:
-                return datetime.fromisoformat(tag['Value'])
+                return datetime.fromisoformat(tag["Value"])
             except ValueError as err:
                 logger.error("Invalid date format in StopTime tag: %s", err)
                 return None
     return None
+
 
 def should_terminate_instance(stop_time, terminate_after_days):
     """
@@ -61,6 +65,7 @@ def should_terminate_instance(stop_time, terminate_after_days):
 
     days_stopped = (datetime.now(timezone.utc) - stop_time).days
     return days_stopped >= terminate_after_days
+
 
 def terminate_instance(ec2_client, instance_id):
     """
@@ -81,6 +86,7 @@ def terminate_instance(ec2_client, instance_id):
             f"Failed to terminate instance {instance_id}"
         ) from err
 
+
 def get_stopped_instances(ec2_client):
     """
     Get all stopped EC2 instances with StopTime tags.
@@ -97,17 +103,18 @@ def get_stopped_instances(ec2_client):
     try:
         response = ec2_client.describe_instances(
             Filters=[
-                {'Name': 'instance-state-name', 'Values': ['stopped']},
-                {'Name': 'tag-key', 'Values': ['StopTime']}
+                {"Name": "instance-state-name", "Values": ["stopped"]},
+                {"Name": "tag-key", "Values": ["StopTime"]},
             ]
         )
         instances = []
-        for reservation in response['Reservations']:
-            instances.extend(reservation['Instances'])
+        for reservation in response["Reservations"]:
+            instances.extend(reservation["Instances"])
         return instances
     except ClientError as err:
         logger.error("Failed to get stopped instances: %s", err)
         raise
+
 
 def handler(event, context):
     """
@@ -121,47 +128,44 @@ def handler(event, context):
         dict: Summary of actions taken
     """
     try:
-        terminate_days = int(os.environ['TERMINATE_AFTER_DAYS'])
+        terminate_days = int(os.environ["TERMINATE_AFTER_DAYS"])
     except (KeyError, ValueError) as err:
         logger.error("Invalid TERMINATE_AFTER_DAYS configuration: %s", err)
         raise ValueError("TERMINATE_AFTER_DAYS must be a valid integer") from err
 
-    ec2_client = boto3.client('ec2')
+    ec2_client = boto3.client("ec2")
     termination_summary = {
-        'terminated_instances': [],
-        'failed_terminations': [],
-        'checked_instances': 0
+        "terminated_instances": [],
+        "failed_terminations": [],
+        "checked_instances": 0,
     }
 
     try:
         instances = get_stopped_instances(ec2_client)
-        termination_summary['checked_instances'] = len(instances)
+        termination_summary["checked_instances"] = len(instances)
 
         for instance in instances:
-            instance_id = instance['InstanceId']
-            stop_time = get_stop_time_from_tags(instance.get('Tags', []))
+            instance_id = instance["InstanceId"]
+            stop_time = get_stop_time_from_tags(instance.get("Tags", []))
 
             if not stop_time:
                 logger.warning(
-                    "Instance %s has no valid StopTime tag, skipping",
-                    instance_id
+                    "Instance %s has no valid StopTime tag, skipping", instance_id
                 )
                 continue
 
             days_stopped = (datetime.now(timezone.utc) - stop_time).days
             logger.info(
-                "Instance %s has been stopped for %d days",
-                instance_id,
-                days_stopped
+                "Instance %s has been stopped for %d days", instance_id, days_stopped
             )
 
             if should_terminate_instance(stop_time, terminate_days):
                 try:
                     terminate_instance(ec2_client, instance_id)
-                    termination_summary['terminated_instances'].append(instance_id)
+                    termination_summary["terminated_instances"].append(instance_id)
                 except InstanceTerminationError as err:
                     logger.error(err)
-                    termination_summary['failed_terminations'].append(instance_id)
+                    termination_summary["failed_terminations"].append(instance_id)
 
     except ClientError as err:
         logger.error("AWS API error: %s", err)
@@ -169,6 +173,7 @@ def handler(event, context):
 
     logger.info("Termination summary: %s", termination_summary)
     return termination_summary
+
 
 if __name__ == "__main__":
     # For local testing
