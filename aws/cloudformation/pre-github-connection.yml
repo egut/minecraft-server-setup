@@ -21,7 +21,7 @@ Metadata:
 
   AWS::CloudFormation::Stack:
     Tags:
-      - Key: 'Application'
+      - Key: 'awsApplication'
         Value: 'Minecraft'
 
 Parameters:
@@ -50,7 +50,7 @@ Resources:
       Tags:
         - Key: 'Purpose'
           Value: 'GitHubActions'
-        - Key: 'Application'
+        - Key: 'awsApplication'
           Value: 'Minecraft'
 
   GitHubActionsRole:
@@ -84,7 +84,7 @@ Resources:
                     'iam:PassedToService': 'cloudformation.amazonaws.com'
       PermissionsBoundary: !Ref PermissionsBoundary
       Tags:
-        - Key: 'Application'
+        - Key: 'awsApplication'
           Value: 'Minecraft'
 
   PermissionsBoundary:

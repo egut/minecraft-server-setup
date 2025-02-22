@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -24,16 +24,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy CloudFormation template
+      - name: Verify AWS credentials
         run: |
-          aws cloudformation deploy \
-            --template-file aws/cloudformation/ec2-minecraft-server.yml \
-            --stack-name minecraft-server \
-            --capabilities CAPABILITY_IAM \
-            --parameter-overrides \
-              ServerName=minecraft-server \
-              MinecraftBucket=${{ secrets.MINECRAFT_BUCKET }} \
-              MinecraftPort=25565 \
-              InactivityShutdownMinutes=30 \
-              TerminateAfterDays=7 \
-              InstanceType=t4g.small
+          aws sts get-caller-identity
