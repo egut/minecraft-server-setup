@@ -1,0 +1,43 @@
+name: Static Code Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint Code Base
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          # Full git history is needed to get a proper list of changed files
+          fetch-depth: 0
+
+      - name: Super-Linter
+        uses: super-linter/super-linter@v5
+        env:
+          VALIDATE_ALL_CODEBASE: false  # Only lint changed files
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Enable specific linters (uncomment what you need)
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_CLOUDFORMATION: true
+          VALIDATE_GITHUB_ACTIONS: true
+          # VALIDATE_JAVASCRIPT_ES: true
+          # VALIDATE_PYTHON: true
+          # VALIDATE_TERRAFORM: true
+          # Add any other configuration options
+          FILTER_REGEX_INCLUDE: .*/(aws|.github)/.* # Only lint files in aws and .github directories
+          FILTER_REGEX_EXCLUDE: .*(dist|node_modules|coverage)/.* # Exclude these directories
