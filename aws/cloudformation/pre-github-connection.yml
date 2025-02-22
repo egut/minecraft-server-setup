@@ -1,0 +1,145 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Creates GitHub OIDC provider and IAM role for GitHub Actions'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'GitHub Configuration'
+        Parameters:
+          - GitHubOrg
+          - RepositoryName
+          - StackNamePrefix
+    ParameterLabels:
+      GitHubOrg:
+        default: 'GitHub Organization'
+      RepositoryName:
+        default: 'Repository Name'
+      StackNamePrefix:
+        default: 'Stack Name Prefix'
+
+  AWS::CloudFormation::Stack:
+    Tags:
+      - Key: 'Application'
+        Value: 'Minecraft'
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Description: 'GitHub organization or username'
+
+  RepositoryName:
+    Type: String
+    Description: 'GitHub repository name'
+
+  StackNamePrefix:
+    Type: String
+    Description: 'Prefix for CloudFormation stacks this role can manage'
+    Default: 'minecraft'
+
+Resources:
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: 'https://token.actions.githubusercontent.com'
+      ClientIdList:
+        - 'sts.amazonaws.com'
+      ThumbprintList:
+        - '6938fd4d98bab03faadb97b34396831e3780aea1'
+      Tags:
+        - Key: 'Purpose'
+          Value: 'GitHubActions'
+        - Key: 'Application'
+          Value: 'Minecraft'
+
+  GitHubActionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-github-actions-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Federated: !GetAtt GitHubOIDCProvider.Arn
+            Action: 'sts:AssumeRoleWithWebIdentity'
+            Condition:
+              StringEquals:
+                'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
+              StringLike:
+                'token.actions.githubusercontent.com:sub': !Sub 'repo:${GitHubOrg}/${RepositoryName}:*'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/PowerUserAccess'
+      Policies:
+        - PolicyName: 'PassRolePolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'iam:PassRole'
+                Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${StackNamePrefix}-*'
+                Condition:
+                  StringEquals:
+                    'iam:PassedToService': 'cloudformation.amazonaws.com'
+      PermissionsBoundary: !Ref PermissionsBoundary
+      Tags:
+        - Key: 'Application'
+          Value: 'Minecraft'
+
+  PermissionsBoundary:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: !Sub '${StackNamePrefix}-boundary'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'cloudformation:*'
+            Resource: !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${StackNamePrefix}-*/*'
+
+          - Effect: 'Allow'
+            Action:
+              - 'cloudformation:ListStacks'
+              - 'cloudformation:DescribeStacks'
+              - 'cloudformation:ListStackResources'
+            Resource: '*'
+
+          - Effect: 'Allow'
+            NotAction:
+              - 'organizations:*'
+              - 'account:*'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                'aws:CalledVia': ['cloudformation.amazonaws.com']
+              StringLike:
+                'aws:CalledViaFirst': 'cloudformation.amazonaws.com'
+                'aws:ResourceTag/aws:cloudformation:stack-name': !Sub '${StackNamePrefix}-*'
+
+          - Effect: 'Allow'
+            NotAction:
+              - 'cloudformation:*'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                'aws:RequestTag/Application': 'Minecraft'
+
+          - Effect: 'Deny'
+            NotAction:
+              - 'cloudformation:*'
+            Resource: '*'
+            Condition:
+              StringNotEquals:
+                'aws:CalledVia': ['cloudformation.amazonaws.com']
+
+
+Outputs:
+  OIDCProviderArn:
+    Description: 'ARN of the GitHub OIDC provider'
+    Value: !GetAtt GitHubOIDCProvider.Arn
+
+  RoleArn:
+    Description: 'ARN of the IAM role for GitHub Actions'
+    Value: !GetAtt GitHubActionsRole.Arn

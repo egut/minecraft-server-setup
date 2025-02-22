@@ -1,7 +1,8 @@
+---
 rules:
   quoted-strings:
     extra-allowed: ["{|}"]
-    quote-type: 'any'
+    quote-type: "any"
     required: true
   key-duplicates: {}
   octal-values:
@@ -9,4 +10,4 @@ rules:
   line-length:
     max: 100
     allow-non-breakable-words: true
-    allow-non-breakable-inline-mappings: false
+    allow-non-breakable-inline-mappings: false  # comment
