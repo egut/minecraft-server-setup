@@ -18,7 +18,7 @@ permissions:
   contents: 'read'
 
 jobs:
-  deploy:
+  deploy-s3-buckets:
     runs-on: 'ubuntu-latest'
     if: "${{ github.event.workflow_run.conclusion == 'success' }}"
     steps:
@@ -45,5 +45,5 @@ jobs:
           name: '${{ env.BUCKET_STACK_NAME }}'
           template: 'aws/cloudformation/s3-bucket.yml'
           parameter-overrides: |
-            AccessLogsStackName=${{ env.USE_LOG_BUCKET == 'true' && env.LOG_STACK_NAME || 'no-set' }}
+            AccessLogsBucket=${{ env.USE_LOG_BUCKET == 'true' && env.LOG_STACK_NAME || 'no-set' }}
           no-fail-on-empty-changeset: '1'
