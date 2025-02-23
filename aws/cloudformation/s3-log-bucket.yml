@@ -9,13 +9,6 @@ Metadata:
         Value: 'Minecraft'
 
 
-Parameters:
-  StackNamePrefix:
-    Type: 'String'
-    Description: 'Prefix for CloudFormation stacks this role can manage'
-    Default: 'minecraft'
-
-
 Resources:
   AccessLogsBucket:
     Type: 'AWS::S3::Bucket'
@@ -30,7 +23,7 @@ Resources:
               access logging to avoid recursive logging"
 
     Properties:
-      BucketName: !Sub '${StackNamePrefix}-${AWS::StackName}'
+      BucketName: !Sub '${AWS::StackName}'
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true

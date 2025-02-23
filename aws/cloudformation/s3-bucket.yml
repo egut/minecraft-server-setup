@@ -10,11 +10,6 @@ Metadata:
 
 
 Parameters:
-  StackNamePrefix:
-    Type: 'String'
-    Description: 'Prefix for CloudFormation stacks this role can manage'
-    Default: 'minecraft'
-
   AccessLogsBucket:
     Type: 'String'
     Description: 'ARN of the account access logs bucket'
@@ -33,7 +28,7 @@ Resources:
     DeletionPolicy: 'Delete'
     UpdateReplacePolicy: 'Retain'
     Properties:
-      BucketName: !Sub '${StackNamePrefix}-${AWS::StackName}'
+      BucketName: !Sub '${AWS::StackName}'
       VersioningConfiguration:
         Status: 'Enabled'
 
@@ -52,7 +47,7 @@ Resources:
       LoggingConfiguration: !If
         - 'HasAccessLogsBucket'
         - DestinationBucketName: !Ref 'AccessLogsBucket'
-          LogFilePrefix: !Sub '${StackNamePrefix}-${AWS::StackName}/'
+          LogFilePrefix: !Sub '${AWS::StackName}/'
         - !Ref 'AWS::NoValue'
 
       LifecycleConfiguration:
