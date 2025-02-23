@@ -1,0 +1,130 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Creates a centralized S3 bucket for various AWS service logs'
+
+Metadata:
+  AWS::CloudFormation::Stack:
+    Tags:
+      - Key: 'Application'
+        Value: 'Minecraft'
+
+
+Parameters:
+  StackNamePrefix:
+    Type: 'String'
+    Description: 'Prefix for CloudFormation stacks this role can manage'
+    Default: 'minecraft'
+
+
+Resources:
+  AccessLogsBucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: 'Delete'
+    UpdateReplacePolicy: 'Retain'
+    Metadata:
+      checkov:
+        skip:
+          - id: 'CKV_AWS_18'
+            comment: >-
+              "Access logs bucket does not require its own
+              access logging to avoid recursive logging"
+
+    Properties:
+      BucketName: !Sub '${StackNamePrefix}-${AWS::StackName}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256'
+            BucketKeyEnabled: true
+
+      VersioningConfiguration:
+        Status: 'Enabled'
+
+      LifecycleConfiguration:
+        Rules:
+          - Id: 'DeleteOldLogs'
+            Status: 'Enabled'
+            ExpirationInDays: 365
+          - Id: 'AbortIncompleteUploads'
+            Status: 'Enabled'
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+
+
+  AccessLogsBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref 'AccessLogsBucket'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # Enforce SSL
+          - Sid: 'EnforceSSLOnly'
+            Effect: 'Deny'
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !Sub '${AccessLogsBucket.Arn}/*'
+              - !GetAtt 'AccessLogsBucket.Arn'
+            Condition:
+              Bool:
+                'aws:SecureTransport': false
+
+          # S3 Access Logs
+          - Sid: 'S3ServerAccessLogsPolicy'
+            Effect: 'Allow'
+            Principal:
+              Service: 'logging.s3.amazonaws.com'
+            Action: 's3:PutObject'
+            Resource: !Sub '${AccessLogsBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                's3:x-amz-acl': 'bucket-owner-full-control'
+
+          # NLB Access Logs
+          - Sid: 'NLBAccessLogs'
+            Effect: 'Allow'
+            Principal:
+              Service: 'logdelivery.elb.amazonaws.com'
+            Action: 's3:PutObject'
+            Resource: !Sub '${AccessLogsBucket.Arn}/*/AWSLogs/${AWS::AccountId}/*'
+            Condition:
+              StringEquals:
+                's3:x-amz-acl': 'bucket-owner-full-control'
+
+          # CloudTrail Logs
+          - Sid: 'CloudTrailLogs'
+            Effect: 'Allow'
+            Principal:
+              Service: 'cloudtrail.amazonaws.com'
+            Action: 's3:PutObject'
+            Resource: !Sub '${AccessLogsBucket.Arn}/AWSLogs/${AWS::AccountId}/*'
+            Condition:
+              StringEquals:
+                's3:x-amz-acl': 'bucket-owner-full-control'
+          - Sid: 'CloudTrailAclCheck'
+            Effect: 'Allow'
+            Principal:
+              Service: 'cloudtrail.amazonaws.com'
+            Action: 's3:GetBucketAcl'
+            Resource: !GetAtt 'AccessLogsBucket.Arn'
+
+
+Outputs:
+  AccessLogsBucketName:
+    Description: 'Name of the access logs bucket'
+    Value: !Ref 'AccessLogsBucket'
+    Export:
+      Name: !Sub '${AWS::StackName}-access-logs-bucket-name'
+
+  AccessLogsBucketArn:
+    Description: 'ARN of the access logs bucket'
+    Value: !GetAtt 'AccessLogsBucket.Arn'
+    Export:
+      Name: !Sub '${AWS::StackName}-access-logs-bucket-arn'

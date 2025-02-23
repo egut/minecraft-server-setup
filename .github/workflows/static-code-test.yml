@@ -1,41 +1,45 @@
 ---
-name: Static Code Tests
+name: 'Static Code Tests'
 
 on:
   push:
-    branches: [ main ]
+    branches: [ 'main' ]
   pull_request:
-    branches: [ main ]
+    branches: [ 'main' ]
   workflow_dispatch:
+
+permissions:
+  contents: 'read'
+  packages: 'read'
 
 jobs:
   lint:
-    name: Lint Code Base
-    runs-on: ubuntu-latest
-    # trunk-ignore(checkov/CKV2_GHA_1)
+    name: 'Lint Code Base'
+    runs-on: 'ubuntu-latest'
+
     permissions:
-      contents: read
-      statuses: write
+      # To report GitHub Actions status checks
+      statuses: 'write'
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: 'Checkout Code'
+        uses: 'actions/checkout@v4'
 
         with:
           # Full git history is needed to get a proper list of changed files
           fetch-depth: 0
 
 
-      - name: Super-Linter
-        uses: super-linter/super-linter@v5
+      - name: 'Super-Linter'
+        uses: 'super-linter/super-linter@v7.2.1'
 
         env:
           VALIDATE_ALL_CODEBASE: false
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: '${{ github.event.repository.default_branch }}'
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
 
           # Set base path for all config files
-          LINTER_RULES_PATH: .trunk/config
+          LINTER_RULES_PATH: '.trunk/config'
 
 
           # Match trunk.yaml linters
@@ -57,5 +61,5 @@ jobs:
           # PYTHON_RUFF_CONFIG_FILE: pyproject.toml
 
           # Python version to match trunk runtime
-          PYTHON_VERSION: 3.10.8
-          NODE_VERSION: 18.20.5
+          PYTHON_VERSION: '3.10.8'
+          NODE_VERSION: '18.20.5'
