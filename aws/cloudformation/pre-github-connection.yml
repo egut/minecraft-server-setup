@@ -101,45 +101,27 @@ Resources:
           - Effect: 'Allow'
             Action:
               - 'cloudformation:CreateStack'
-              - 'cloudformation:UpdateStack'
               - 'cloudformation:DeleteStack'
-              - 'cloudformation:DescribeStacks'
               - 'cloudformation:DescribeStackEvents'
               - 'cloudformation:DescribeStackResource'
               - 'cloudformation:DescribeStackResources'
+              - 'cloudformation:DescribeStacks'
+              - 'cloudformation:UpdateStack'
             Resource: !Sub
               'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${StackNamePrefix}-*/*'
 
           - Effect: 'Allow'
             Action:
-              - 'cloudformation:ListStacks'
               - 'cloudformation:DescribeStacks'
               - 'cloudformation:ListStackResources'
+              - 'cloudformation:ListStacks'
             Resource: '*'
 
+          # All S3 actions for resources with the stack prefix
           - Effect: 'Allow'
-            Action:
-              - 's3:CreateBucket'
-              - 's3:DeleteBucket'
-              - 's3:PutBucketPolicy'
-              - 's3:DeleteBucketPolicy'
-              - 's3:GetBucketPolicy'
-              - 's3:PutBucketVersioning'
-              - 's3:GetBucketVersioning'
-              - 's3:PutBucketPublicAccessBlock'
-              - 's3:GetBucketPublicAccessBlock'
-              - 's3:PutBucketLogging'
-              - 's3:GetBucketLogging'
-              - 's3:PutLifecycleConfiguration'
-              - 's3:GetLifecycleConfiguration'
+            Action: 's3:*'
             Resource:
               - !Sub 'arn:${AWS::Partition}:s3:::${StackNamePrefix}-*'
-            Condition:
-              StringEquals:
-                'aws:CalledVia': ['cloudformation.amazonaws.com']
-              StringLike:
-                'aws:CalledViaFirst': 'cloudformation.amazonaws.com'
-                'aws:ResourceTag/aws:cloudformation:stack-name': !Sub '${StackNamePrefix}-*'
 
           - Effect: 'Allow'
             NotAction:
