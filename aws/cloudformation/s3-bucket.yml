@@ -2,28 +2,59 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Creates a secure S3 bucket for Minecraft server configuration and artifacts'
 
+Metadata:
+  AWS::CloudFormation::Stack:
+    Tags:
+      - Key: 'Application'
+        Value: 'Minecraft'
+
+
+Parameters:
+  StackNamePrefix:
+    Type: 'String'
+    Description: 'Prefix for CloudFormation stacks this role can manage'
+    Default: 'minecraft'
+
+  AccessLogsBucket:
+    Type: 'String'
+    Description: 'ARN of the account access logs bucket'
+    Default: 'no-set'
+
+
+Conditions:
+  HasAccessLogsBucket: !Not
+    - !Equals
+      - 'no-set'
+      - !Ref 'AccessLogsBucket'
+
 Resources:
   MinecraftBucket:
     Type: 'AWS::S3::Bucket'
     DeletionPolicy: 'Delete'
     UpdateReplacePolicy: 'Retain'
     Properties:
-      BucketName: !Sub '${AWS::StackName}-minecraft'
+      BucketName: !Sub '${StackNamePrefix}-${AWS::StackName}'
       VersioningConfiguration:
         Status: 'Enabled'
+
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: 'AES256'
             BucketKeyEnabled: true
-      LoggingConfiguration:
-        DestinationBucketName: !Ref 'AccessLogsBucket'
-        LogFilePrefix: 'minecraft-bucket-logs/'
+
+      LoggingConfiguration: !If
+        - 'HasAccessLogsBucket'
+        - DestinationBucketName: !Ref 'AccessLogsBucket'
+          LogFilePrefix: !Sub '${StackNamePrefix}-${AWS::StackName}/'
+        - !Ref 'AWS::NoValue'
+
       LifecycleConfiguration:
         Rules:
           - Id: 'DeleteOldVersions'
@@ -35,37 +66,6 @@ Resources:
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 7
 
-  AccessLogsBucket:
-    Type: 'AWS::S3::Bucket'
-    DeletionPolicy: 'Delete'
-    UpdateReplacePolicy: 'Retain'
-    Metadata:
-      checkov:
-        skip:
-          - id: CKV_AWS_18
-            comment: "Access logs bucket does not require its own access logging to avoid recursive logging"
-    Properties:
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: 'AES256'
-            BucketKeyEnabled: true
-      VersioningConfiguration:
-        Status: 'Enabled'
-      LifecycleConfiguration:
-        Rules:
-          - Id: 'DeleteOldLogs'
-            Status: 'Enabled'
-            ExpirationInDays: 365
-          - Id: 'AbortIncompleteUploads'
-            Status: 'Enabled'
-            AbortIncompleteMultipartUpload:
-              DaysAfterInitiation: 7
 
   MinecraftBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
@@ -84,6 +84,7 @@ Resources:
             Condition:
               Bool:
                 'aws:SecureTransport': false
+
           - Sid: 'EnforceSecureCommunication'
             Effect: 'Deny'
             Principal: '*'
@@ -95,33 +96,6 @@ Resources:
               NumericLessThan:
                 's3:TlsVersion': 1.2
 
-  AccessLogsBucketPolicy:
-    Type: 'AWS::S3::BucketPolicy'
-    Properties:
-      Bucket: !Ref 'AccessLogsBucket'
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: 'EnforceSSLOnly'
-            Effect: 'Deny'
-            Principal: '*'
-            Action: 's3:*'
-            Resource:
-              - !Sub '${AccessLogsBucket.Arn}/*'
-              - !GetAtt 'AccessLogsBucket.Arn'
-            Condition:
-              Bool:
-                'aws:SecureTransport': false
-          - Sid: 'EnforceSecureCommunication'
-            Effect: 'Deny'
-            Principal: '*'
-            Action: 's3:*'
-            Resource:
-              - !Sub '${AccessLogsBucket.Arn}/*'
-              - !GetAtt 'AccessLogsBucket.Arn'
-            Condition:
-              NumericLessThan:
-                's3:TlsVersion': 1.2
 
 Outputs:
   BucketName:

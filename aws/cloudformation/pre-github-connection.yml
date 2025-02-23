@@ -21,7 +21,7 @@ Metadata:
 
   AWS::CloudFormation::Stack:
     Tags:
-      - Key: 'awsApplication'
+      - Key: 'Application'
         Value: 'Minecraft'
 
 Parameters:
@@ -50,7 +50,7 @@ Resources:
       Tags:
         - Key: 'Purpose'
           Value: 'GitHubActions'
-        - Key: 'awsApplication'
+        - Key: 'Application'
           Value: 'Minecraft'
 
   GitHubActionsRole:
@@ -69,8 +69,10 @@ Resources:
                 'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
               StringLike:
                 'token.actions.githubusercontent.com:sub': !Sub 'repo:${GitHubOrg}/${RepositoryName}:*'
+
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/PowerUserAccess'
+
       Policies:
         - PolicyName: 'PassRolePolicy'
           PolicyDocument:
@@ -82,10 +84,12 @@ Resources:
                 Condition:
                   StringEquals:
                     'iam:PassedToService': 'cloudformation.amazonaws.com'
+
       PermissionsBoundary: !Ref PermissionsBoundary
       Tags:
-        - Key: 'awsApplication'
+        - Key: 'Application'
           Value: 'Minecraft'
+
 
   PermissionsBoundary:
     Type: 'AWS::IAM::ManagedPolicy'
