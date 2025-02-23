@@ -1,0 +1,88 @@
+---
+name: 'Deploy AWS resources'
+
+on:
+  workflow_run:
+    workflows: ["Static Code Tests"]
+    types:
+      - 'completed'
+    branches: ['main']
+
+env:
+  SERVER_NAME: 'rubik'
+  SERVER_PORT: '25565'
+  STACK_NAME_PREFIX: 'minecraft'
+  USE_LOG_BUCKET: 'true'
+
+permissions:
+  id-token: 'write'
+  contents: 'read'
+
+jobs:
+  deploy-s3-logs-bucket:
+    runs-on: 'ubuntu-latest'
+    if: "${{ github.event.workflow_run.conclusion == 'success' }}"
+    steps:
+      - name: 'Checkout repository'
+        uses: 'actions/checkout@v4'
+
+      - name: 'Configure AWS credentials'
+        uses: 'aws-actions/configure-aws-credentials@v4'
+        with:
+          role-to-assume: '${{ secrets.AWS_ROLE_ARN }}'
+          aws-region: '${{ secrets.AWS_REGION }}'
+
+      - name: 'Deploy Access Logs Bucket'
+        if: "${{ env.USE_LOG_BUCKET == 'true' }}"
+        uses: 'aws-actions/aws-cloudformation-github-deploy@v1'
+        with:
+          name: '${{ env.STACK_NAME_PREFIX }}-${{ env.SERVER_NAME }}-logging'
+          template: 'aws/cloudformation/s3-log-bucket.yml'
+          no-fail-on-empty-changeset: '1'
+
+  deploy-s3-buckets:
+    runs-on: 'ubuntu-latest'
+    needs: 'deploy-s3-logs-bucket'
+    if: "${{ github.event.workflow_run.conclusion == 'success' }}"
+    steps:
+      - name: 'Checkout repository'
+        uses: 'actions/checkout@v4'
+
+      - name: 'Configure AWS credentials'
+        uses: 'aws-actions/configure-aws-credentials@v4'
+        with:
+          role-to-assume: '${{ secrets.AWS_ROLE_ARN }}'
+          aws-region: '${{ secrets.AWS_REGION }}'
+
+      - name: 'Deploy Minecraft Bucket'
+        uses: 'aws-actions/aws-cloudformation-github-deploy@v1'
+        with:
+          name: '${{ env.STACK_NAME_PREFIX }}-${{ env.SERVER_NAME }}-deploy'
+          template: 'aws/cloudformation/s3-bucket.yml'
+          parameter-overrides: |
+            AccessLogsBucket=${{ env.USE_LOG_BUCKET == 'true' && env.LOG_STACK_NAME || 'no-set' }}
+          no-fail-on-empty-changeset: '1'
+
+  deploy-vpc:
+    runs-on: 'ubuntu-latest'
+    if: "${{ github.event.workflow_run.conclusion == 'success' }}"
+    steps:
+      - name: 'Checkout repository'
+        uses: 'actions/checkout@v4'
+
+      - name: 'Configure AWS credentials'
+        uses: 'aws-actions/configure-aws-credentials@v4'
+        with:
+          role-to-assume: '${{ secrets.AWS_ROLE_ARN }}'
+          aws-region: '${{ secrets.AWS_REGION }}'
+
+      - name: 'Deploy VPC'
+        uses: 'aws-actions/aws-cloudformation-github-deploy@v1'
+        with:
+          name: '${{ env.STACK_NAME_PREFIX }}-${{ env.SERVER_NAME }}-vpc'
+          template: 'aws/cloudformation/vpc.yml'
+          parameter-overrides: |
+              VpcCidrBlock=10.0.50.0/24
+              ServerName=${{ env.SERVER_NAME }}
+              MinecraftPort=${{ env.SERVER_PORT }}
+          no-fail-on-empty-changeset: '1'

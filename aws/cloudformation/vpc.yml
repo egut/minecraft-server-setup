@@ -10,7 +10,7 @@ Parameters:
   ServerName:
     Type: 'String'
     Description: 'Name of the Minecraft server'
-    Default: 'minecraft-server'
+    Default: 'server'
 
   MinecraftPort:
     Type: 'Number'
@@ -19,164 +19,295 @@ Parameters:
     MinValue: 1024
     MaxValue: 65535
 
+  StackNamePrefix:
+    Type: 'String'
+    Description: 'Prefix for CloudFormation stacks this role can manage'
+    Default: 'minecraft'
+
+Metadata:
+  AWS::CloudFormation::Stack:
+    Tags:
+      - Key: 'Application'
+        Value: 'Minecraft'
+
 Resources:
   VPC:
     Type: 'AWS::EC2::VPC'
     Properties:
-      CidrBlock: !Ref VpcCidrBlock
+      CidrBlock: !Ref 'VpcCidrBlock'
       EnableDnsHostnames: true
       EnableDnsSupport: true
       Tags:
         - Key: 'Name'
-          Value: !Sub 'vpc-${AWS::Region}'
+          Value: !Sub '${StackNamePrefix}-vpc-${AWS::Region}'
+
+  DefaultSGCleanupFunction:
+    Type: 'AWS::Lambda::Function'
+    Metadata:
+      checkov:
+        skip:
+          - id: 'CKV_AWS_116'
+            comment: >-
+               "Lambda function should have dead letter queue enabled" - Not needed for this simple function
+          - id: 'CKV_AWS_117'
+            comment: >-
+              "Lambda function should be deployed inside a VPC" - The VPC is created in the template
+    DependsOn: 'VPC'
+    Properties:
+      Handler: 'index.handler'
+      Role: !GetAtt 'DefaultSGCleanupRole.Arn'
+      Runtime: 'python3.12'
+      Timeout: 60
+      MemorySize: 128
+      ReservedConcurrentExecutions: 1
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import logging
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          ec2 = boto3.client('ec2')
+
+          def handler(event, context):
+              try:
+                  if event['RequestType'] in ['Create', 'Update']:
+                      vpc_id = event['ResourceProperties']['VpcId']
+                      logger.info(f"Processing VPC: {vpc_id}")
+
+                      # Get the default security group
+                      response = ec2.describe_security_groups(
+                          Filters=[
+                              {'Name': 'vpc-id', 'Values': [vpc_id]},
+                              {'Name': 'group-name', 'Values': ['default']}
+                          ]
+                      )
+
+                      if not response['SecurityGroups']:
+                          raise Exception(f"Default security group not found for VPC {vpc_id}")
+
+                      sg = response['SecurityGroups'][0]
+                      sg_id = sg['GroupId']
+
+                      # Remove all ingress rules
+                      if sg['IpPermissions']:
+                          ec2.revoke_security_group_ingress(
+                              GroupId=sg_id,
+                              IpPermissions=sg['IpPermissions']
+                          )
+                          logger.info(f"Removed ingress rules from {sg_id}")
+
+                      # Remove all egress rules
+                      if sg['IpPermissionsEgress']:
+                          ec2.revoke_security_group_egress(
+                              GroupId=sg_id,
+                              IpPermissions=sg['IpPermissionsEgress']
+                          )
+                          logger.info(f"Removed egress rules from {sg_id}")
+
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                          'Message': f'Successfully cleaned default SG for VPC {vpc_id}'
+                      })
+                  else:  # Delete
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                          'Message': 'Nothing to do on delete'
+                      })
+
+              except Exception as e:
+                  logger.error(f"Error: {str(e)}")
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {
+                      'Error': str(e)
+                  })
+
+  DefaultSGCleanupRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: 'SecurityGroupManagement'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Read permissions - no constraints needed
+              - Effect: 'Allow'
+                Action:
+                  - 'ec2:DescribeSecurityGroups'
+                Resource: '*'
+              # Write permissions - with constraints
+              - Effect: 'Allow'
+                Action:
+                  - 'ec2:RevokeSecurityGroupIngress'
+                  - 'ec2:RevokeSecurityGroupEgress'
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/Application': 'Minecraft'
+                    'aws:PrincipalTag/Application': 'Minecraft'
+                  ArnLike:
+                    'aws:PrincipalARN': !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${StackNamePrefix}-*'
+
+  DefaultSGCleanup:
+    Type: 'AWS::CloudFormation::CustomResource'
+    Properties:
+      ServiceToken: !GetAtt 'DefaultSGCleanupFunction.Arn'
+      VpcId: !Ref 'VPC'
 
   PublicSubnet1:
     Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref VPC
-      CidrBlock: !Select [0, !Cidr [!Ref VpcCidrBlock, 2, 26]]
+      VpcId: !Ref 'VPC'
+      CidrBlock: !Select [0, !Cidr [!Ref 'VpcCidrBlock', 2, 26]]
       AvailabilityZone: !Select [0, !GetAZs '']
       Tags:
         - Key: 'Name'
-          Value: !Sub 'public-subnet-1-${AWS::Region}'
+          Value: !Sub '${StackNamePrefix}-public-subnet-1-${AWS::Region}'
 
   PublicSubnet2:
     Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref VPC
-      CidrBlock: !Select [1, !Cidr [!Ref VpcCidrBlock, 2, 26]]
+      VpcId: !Ref 'VPC'
+      CidrBlock: !Select [1, !Cidr [!Ref 'VpcCidrBlock', 2, 26]]
       AvailabilityZone: !Select [1, !GetAZs '']
       Tags:
         - Key: 'Name'
-          Value: !Sub 'public-subnet-2-${AWS::Region}'
+          Value: !Sub '${StackNamePrefix}-public-subnet-2-${AWS::Region}'
 
   PrivateSubnet1:
     Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref VPC
-      CidrBlock: !Select [2, !Cidr [!Ref VpcCidrBlock, 2, 26]]
+      VpcId: !Ref 'VPC'
+      CidrBlock: !Select [2, !Cidr [!Ref 'VpcCidrBlock', 2, 26]]
       AvailabilityZone: !Select [0, !GetAZs '']
       Tags:
         - Key: 'Name'
-          Value: !Sub 'private-subnet-1-${AWS::Region}'
+          Value: !Sub '${StackNamePrefix}-private-subnet-1-${AWS::Region}'
 
   PrivateSubnet2:
     Type: 'AWS::EC2::Subnet'
     Properties:
-      VpcId: !Ref VPC
-      CidrBlock: !Select [3, !Cidr [!Ref VpcCidrBlock, 2, 26]]
+      VpcId: !Ref 'VPC'
+      CidrBlock: !Select [3, !Cidr [!Ref 'VpcCidrBlock', 2, 26]]
       AvailabilityZone: !Select [1, !GetAZs '']
       Tags:
         - Key: 'Name'
-          Value: !Sub 'private-subnet-2-${AWS::Region}'
+          Value: !Sub '${StackNamePrefix}-private-subnet-2-${AWS::Region}'
 
   # Internet Gateway
   InternetGateway:
     Type: 'AWS::EC2::InternetGateway'
     Properties:
       Tags:
-        - Key: Name
-          Value: !Sub '${ServerName}-igw'
+        - Key: 'Name'
+          Value: !Sub '${StackNamePrefix}-${ServerName}-igw'
 
   AttachGateway:
     Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
-      VpcId: !Ref VPC
-      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref 'VPC'
+      InternetGatewayId: !Ref 'InternetGateway'
 
   # NAT Gateway
   NatGatewayEIP:
     Type: 'AWS::EC2::EIP'
     Properties:
-      Domain: vpc
+      Domain: 'vpc'
 
   NatGateway:
     Type: 'AWS::EC2::NatGateway'
     Properties:
-      AllocationId: !GetAtt NatGatewayEIP.AllocationId
-      SubnetId: !Ref PublicSubnet1
+      AllocationId: !GetAtt 'NatGatewayEIP.AllocationId'
+      SubnetId: !Ref 'PublicSubnet1'
       Tags:
-        - Key: Name
-          Value: !Sub '${ServerName}-nat'
+        - Key: 'Name'
+          Value: !Sub '${StackNamePrefix}-${ServerName}-nat'
 
 
   # Route Tables
   PublicRouteTable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
-      VpcId: !Ref VPC
+      VpcId: !Ref 'VPC'
       Tags:
-        - Key: Name
-          Value: !Sub '${ServerName}-public-rt'
+        - Key: 'Name'
+          Value: !Sub '${StackNamePrefix}-${ServerName}-public-rt'
 
   PrivateRouteTable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
-      VpcId: !Ref VPC
+      VpcId: !Ref 'VPC'
       Tags:
-        - Key: Name
-          Value: !Sub '${ServerName}-private-rt'
+        - Key: 'Name'
+          Value: !Sub '${StackNamePrefix}-${ServerName}-private-rt'
 
   PublicRoute:
     Type: 'AWS::EC2::Route'
-    DependsOn: AttachGateway
+    DependsOn: 'AttachGateway'
     Properties:
-      RouteTableId: !Ref PublicRouteTable
+      RouteTableId: !Ref 'PublicRouteTable'
       DestinationCidrBlock: '0.0.0.0/0'
-      GatewayId: !Ref InternetGateway
+      GatewayId: !Ref 'InternetGateway'
 
   PrivateRoute:
     Type: 'AWS::EC2::Route'
     Properties:
-      RouteTableId: !Ref PrivateRouteTable
+      RouteTableId: !Ref 'PrivateRouteTable'
       DestinationCidrBlock: '0.0.0.0/0'
-      NatGatewayId: !Ref NatGateway
+      NatGatewayId: !Ref 'NatGateway'
 
   PublicSubnet1RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
-      SubnetId: !Ref PublicSubnet1
-      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref 'PublicSubnet1'
+      RouteTableId: !Ref 'PublicRouteTable'
 
   PublicSubnet2RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
-      SubnetId: !Ref PublicSubnet2
-      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref 'PublicSubnet2'
+      RouteTableId: !Ref 'PublicRouteTable'
 
   PrivateSubnet1RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
-      SubnetId: !Ref PrivateSubnet1
-      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref 'PrivateSubnet1'
+      RouteTableId: !Ref 'PrivateRouteTable'
 
   PrivateSubnet2RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
-      SubnetId: !Ref PrivateSubnet2
-      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref 'PrivateSubnet2'
+      RouteTableId: !Ref 'PrivateRouteTable'
 
   PublicNACL:
     Type: 'AWS::EC2::NetworkAcl'
     Properties:
-      VpcId: !Ref VPC
+      VpcId: !Ref 'VPC'
       Tags:
         - Key: 'Name'
-          Value: !Sub 'public-nacl-${AWS::Region}'
+          Value: !Sub '${StackNamePrefix}-public-nacl-${AWS::Region}'
 
   PrivateNACL:
     Type: 'AWS::EC2::NetworkAcl'
     Properties:
-      VpcId: !Ref VPC
+      VpcId: !Ref 'VPC'
       Tags:
         - Key: 'Name'
-          Value: !Sub 'private-nacl-${AWS::Region}'
+          Value: !Sub '${StackNamePrefix}-private-nacl-${AWS::Region}'
 
   # Public NACL Rules
   PublicNACLInboundHTTPS:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PublicNACL
+      NetworkAclId: !Ref 'PublicNACL'
       RuleNumber: 100
       Protocol: 6  # TCP
       RuleAction: 'allow'
@@ -189,7 +320,7 @@ Resources:
   PublicNACLOutboundHTTPS:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PublicNACL
+      NetworkAclId: !Ref 'PublicNACL'
       RuleNumber: 100
       Protocol: 6  # TCP
       RuleAction: 'allow'
@@ -202,7 +333,7 @@ Resources:
   PublicNACLInboundMinecraft:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PublicNACL
+      NetworkAclId: !Ref 'PublicNACL'
       RuleNumber: 200
       Protocol: 6  # TCP
       RuleAction: 'allow'
@@ -215,7 +346,7 @@ Resources:
   PublicNACLOutboundMinecraft:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PublicNACL
+      NetworkAclId: !Ref 'PublicNACL'
       RuleNumber: 200
       Protocol: 6  # TCP
       RuleAction: 'allow'
@@ -229,7 +360,7 @@ Resources:
   PrivateNACLInboundHTTPS:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PrivateNACL
+      NetworkAclId: !Ref 'PrivateNACL'
       RuleNumber: 100
       Protocol: 6  # TCP
       RuleAction: 'allow'
@@ -242,7 +373,7 @@ Resources:
   PrivateNACLOutboundHTTPS:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PrivateNACL
+      NetworkAclId: !Ref 'PrivateNACL'
       RuleNumber: 100
       Protocol: 6  # TCP
       RuleAction: 'allow'
@@ -256,12 +387,12 @@ Resources:
   PrivateNACLInboundEFS:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PrivateNACL
+      NetworkAclId: !Ref 'PrivateNACL'
       RuleNumber: 300
       Protocol: 6  # TCP
       RuleAction: 'allow'
       Egress: false
-      CidrBlock: !Ref VpcCidrBlock
+      CidrBlock: !Ref 'VpcCidrBlock'
       PortRange:
         From: 2049
         To: 2049
@@ -269,12 +400,12 @@ Resources:
   PrivateNACLOutboundEFS:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PrivateNACL
+      NetworkAclId: !Ref 'PrivateNACL'
       RuleNumber: 300
       Protocol: 6  # TCP
       RuleAction: 'allow'
       Egress: true
-      CidrBlock: !Ref VpcCidrBlock
+      CidrBlock: !Ref 'VpcCidrBlock'
       PortRange:
         From: 2049
         To: 2049
@@ -283,12 +414,12 @@ Resources:
   PrivateNACLInboundEFSMountHelper:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PrivateNACL
+      NetworkAclId: !Ref 'PrivateNACL'
       RuleNumber: 301
       Protocol: 6  # TCP
       RuleAction: 'allow'
       Egress: false
-      CidrBlock: !Ref VpcCidrBlock
+      CidrBlock: !Ref 'VpcCidrBlock'
       PortRange:
         From: 988
         To: 988
@@ -296,12 +427,12 @@ Resources:
   PrivateNACLOutboundEFSMountHelper:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PrivateNACL
+      NetworkAclId: !Ref 'PrivateNACL'
       RuleNumber: 301
       Protocol: 6  # TCP
       RuleAction: 'allow'
       Egress: true
-      CidrBlock: !Ref VpcCidrBlock
+      CidrBlock: !Ref 'VpcCidrBlock'
       PortRange:
         From: 988
         To: 988
@@ -310,12 +441,12 @@ Resources:
   PrivateNACLInboundEFSMountHelperUDP:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PrivateNACL
+      NetworkAclId: !Ref 'PrivateNACL'
       RuleNumber: 302
       Protocol: 17  # UDP
       RuleAction: 'allow'
       Egress: false
-      CidrBlock: !Ref VpcCidrBlock
+      CidrBlock: !Ref 'VpcCidrBlock'
       PortRange:
         From: 988
         To: 988
@@ -323,12 +454,12 @@ Resources:
   PrivateNACLOutboundEFSMountHelperUDP:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PrivateNACL
+      NetworkAclId: !Ref 'PrivateNACL'
       RuleNumber: 302
       Protocol: 17  # UDP
       RuleAction: 'allow'
       Egress: true
-      CidrBlock: !Ref VpcCidrBlock
+      CidrBlock: !Ref 'VpcCidrBlock'
       PortRange:
         From: 988
         To: 988
@@ -337,7 +468,7 @@ Resources:
   PrivateNACLInboundTimeSync:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PrivateNACL
+      NetworkAclId: !Ref 'PrivateNACL'
       RuleNumber: 303
       Protocol: 17  # UDP
       RuleAction: 'allow'
@@ -350,7 +481,7 @@ Resources:
   PrivateNACLOutboundTimeSync:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PrivateNACL
+      NetworkAclId: !Ref 'PrivateNACL'
       RuleNumber: 303
       Protocol: 17  # UDP
       RuleAction: 'allow'
@@ -364,12 +495,12 @@ Resources:
   PrivateNACLInboundEFSResponse:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PrivateNACL
+      NetworkAclId: !Ref 'PrivateNACL'
       RuleNumber: 310
       Protocol: 6  # TCP
       RuleAction: 'allow'
       Egress: false
-      CidrBlock: !Ref VpcCidrBlock
+      CidrBlock: !Ref 'VpcCidrBlock'
       PortRange:
         From: 1024
         To: 65535
@@ -377,40 +508,39 @@ Resources:
   PrivateNACLOutboundEFSResponse:
     Type: 'AWS::EC2::NetworkAclEntry'
     Properties:
-      NetworkAclId: !Ref PrivateNACL
+      NetworkAclId: !Ref 'PrivateNACL'
       RuleNumber: 310
       Protocol: 6  # TCP
       RuleAction: 'allow'
       Egress: true
-      CidrBlock: !Ref VpcCidrBlock
+      CidrBlock: !Ref 'VpcCidrBlock'
       PortRange:
         From: 1024
         To: 65535
 
-  # Don't forget to associate the NACLs with their respective subnets
   PublicSubnet1NACLAssociation:
     Type: 'AWS::EC2::SubnetNetworkAclAssociation'
     Properties:
-      SubnetId: !Ref PublicSubnet1
-      NetworkAclId: !Ref PublicNACL
+      SubnetId: !Ref 'PublicSubnet1'
+      NetworkAclId: !Ref 'PublicNACL'
 
   PublicSubnet2NACLAssociation:
     Type: 'AWS::EC2::SubnetNetworkAclAssociation'
     Properties:
-      SubnetId: !Ref PublicSubnet2
-      NetworkAclId: !Ref PublicNACL
+      SubnetId: !Ref 'PublicSubnet2'
+      NetworkAclId: !Ref 'PublicNACL'
 
   PrivateSubnet1NACLAssociation:
     Type: 'AWS::EC2::SubnetNetworkAclAssociation'
     Properties:
-      SubnetId: !Ref PrivateSubnet1
-      NetworkAclId: !Ref PrivateNACL
+      SubnetId: !Ref 'PrivateSubnet1'
+      NetworkAclId: !Ref 'PrivateNACL'
 
   PrivateSubnet2NACLAssociation:
     Type: 'AWS::EC2::SubnetNetworkAclAssociation'
     Properties:
-      SubnetId: !Ref PrivateSubnet2
-      NetworkAclId: !Ref PrivateNACL
+      SubnetId: !Ref 'PrivateSubnet2'
+      NetworkAclId: !Ref 'PrivateNACL'
 
   FlowLogsRole:
     Type: 'AWS::IAM::Role'
@@ -431,10 +561,11 @@ Resources:
                 Action:
                   - 'logs:CreateLogGroup'
                   - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
                   - 'logs:DescribeLogGroups'
                   - 'logs:DescribeLogStreams'
-                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/vpc/flowlogs/*'
+                  - 'logs:PutLogEvents'
+                Resource: !Sub
+                  'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/vpc/flowlogs/*'
 
   FlowLogsKey:
     Type: 'AWS::KMS::Key'
@@ -455,15 +586,16 @@ Resources:
             Principal:
               Service: 'logs.amazonaws.com'
             Action:
-              - 'kms:Encrypt*'
               - 'kms:Decrypt*'
-              - 'kms:ReEncrypt*'
-              - 'kms:GenerateDataKey*'
               - 'kms:Describe*'
+              - 'kms:Encrypt*'
+              - 'kms:GenerateDataKey*'
+              - 'kms:ReEncrypt*'
             Resource: '*'
             Condition:
               ArnLike:
-                'kms:EncryptionContext:aws:logs:arn': !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*'
+                'kms:EncryptionContext:aws:logs:arn':
+                  !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*'
       KeyUsage: 'ENCRYPT_DECRYPT'
       EnableKeyRotation: true
 
@@ -472,16 +604,16 @@ Resources:
     DeletionPolicy: 'Delete'
     UpdateReplacePolicy: 'Retain'
     Properties:
-      LogGroupName: !Sub '/aws/vpc/flowlogs/${AWS::StackName}'
+      LogGroupName: !Sub '/aws/vpc/flowlogs/${StackNamePrefix}-${AWS::StackName}'
       RetentionInDays: '30'
       KmsKeyId: !GetAtt 'FlowLogsKey.Arn'
 
   VPCFlowLog:
     Type: 'AWS::EC2::FlowLog'
     Properties:
-      DeliverLogsPermissionArn: !GetAtt FlowLogsRole.Arn
-      LogGroupName: !Ref FlowLogsGroup
-      ResourceId: !Ref VPC
+      DeliverLogsPermissionArn: !GetAtt 'FlowLogsRole.Arn'
+      LogGroupName: !Ref 'FlowLogsGroup'
+      ResourceId: !Ref 'VPC'
       ResourceType: 'VPC'
       TrafficType: 'ALL'
 
@@ -489,85 +621,85 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: 'Security group for SSM endpoints'
-      VpcId: !Ref VPC
+      VpcId: !Ref 'VPC'
 
   # VPC Endpoints for SSM
   SSMEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
-      VpcId: !Ref VPC
+      VpcId: !Ref 'VPC'
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssm'
-      VpcEndpointType: Interface
+      VpcEndpointType: 'Interface'
       SubnetIds:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
+        - !Ref 'PrivateSubnet1'
+        - !Ref 'PrivateSubnet2'
       SecurityGroupIds:
-        - !Ref SSMSecurityGroup
+        - !Ref 'SSMSecurityGroup'
       PrivateDnsEnabled: true
 
   SSMMessagesEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
-      VpcId: !Ref VPC
+      VpcId: !Ref 'VPC'
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssmmessages'
-      VpcEndpointType: Interface
+      VpcEndpointType: 'Interface'
       SubnetIds:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
+        - !Ref 'PrivateSubnet1'
+        - !Ref 'PrivateSubnet2'
       SecurityGroupIds:
-        - !Ref SSMSecurityGroup
+        - !Ref 'SSMSecurityGroup'
       PrivateDnsEnabled: true
 
   EC2MessagesEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
-      VpcId: !Ref VPC
+      VpcId: !Ref 'VPC'
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2messages'
-      VpcEndpointType: Interface
+      VpcEndpointType: 'Interface'
       SubnetIds:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
+        - !Ref 'PrivateSubnet1'
+        - !Ref 'PrivateSubnet2'
       SecurityGroupIds:
-        - !Ref SSMSecurityGroup
+        - !Ref 'SSMSecurityGroup'
       PrivateDnsEnabled: true
 
   # S3 Gateway Endpoint
   S3Endpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
-      VpcId: !Ref VPC
+      VpcId: !Ref 'VPC'
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
-      VpcEndpointType: Gateway
+      VpcEndpointType: 'Gateway'
       RouteTableIds:
-        - !Ref PrivateRouteTable
+        - !Ref 'PrivateRouteTable'
 
 Outputs:
   VpcIdExport:
     Description: 'VPC ID'
-    Value: !Ref VPC
+    Value: !Ref 'VPC'
     Export:
-      Name: !Sub '${ServerName}-vpc-id'
+      Name: !Sub '${StackNamePrefix}-${ServerName}-vpc-id'
 
   PublicSubnetsExport:
     Description: 'Public Subnet IDs'
     Value: !Join
       - ','
-      - - !Ref PublicSubnet1
-        - !Ref PublicSubnet2
+      - - !Ref 'PublicSubnet1'
+        - !Ref 'PublicSubnet2'
     Export:
-      Name: !Sub '${ServerName}-public-subnets'
+      Name: !Sub '${StackNamePrefix}-${ServerName}-public-subnets'
 
   PrivateSubnetsExport:
     Description: 'Private Subnet IDs'
     Value: !Join
       - ','
-      - - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
+      - - !Ref 'PrivateSubnet1'
+        - !Ref 'PrivateSubnet2'
     Export:
-      Name: !Sub '${ServerName}-private-subnets'
+      Name: !Sub '${StackNamePrefix}-${ServerName}-private-subnets'
 
   SSMSecurityGroupExport:
     Description: 'SSM Security Group'
-    Value: !Ref SSMSecurityGroup
+    Value: !Ref 'SSMSecurityGroup'
     Export:
-      Name: !Sub '${ServerName}-ssm-security-group'
+      Name: !Sub '${StackNamePrefix}-${ServerName}-ssm-security-group'
