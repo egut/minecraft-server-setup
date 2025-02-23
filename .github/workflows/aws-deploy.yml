@@ -59,7 +59,7 @@ jobs:
         with:
           name: '${{ env.STACK_NAME_PREFIX }}-${{ env.SERVER_NAME }}-deploy'
           template: 'aws/cloudformation/s3-bucket.yml'
-          parameter-overrides: |
+          parameter-overrides: >-
             AccessLogsBucket=${{ env.USE_LOG_BUCKET == 'true' && env.LOG_STACK_NAME || 'no-set' }}
           no-fail-on-empty-changeset: '1'
 
@@ -81,8 +81,8 @@ jobs:
         with:
           name: '${{ env.STACK_NAME_PREFIX }}-${{ env.SERVER_NAME }}-vpc'
           template: 'aws/cloudformation/vpc.yml'
-          parameter-overrides: |
-              VpcCidrBlock=10.0.50.0/24
-              ServerName=${{ env.SERVER_NAME }}
+          parameter-overrides: >-
+              VpcCidrBlock=10.0.50.0/24,
+              ServerName=${{ env.SERVER_NAME }},
               MinecraftPort=${{ env.SERVER_PORT }}
           no-fail-on-empty-changeset: '1'
