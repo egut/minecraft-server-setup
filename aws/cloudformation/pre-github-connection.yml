@@ -8,9 +8,9 @@ Metadata:
       - Label:
           default: 'GitHub Configuration'
         Parameters:
-          - GitHubOrg
-          - RepositoryName
-          - StackNamePrefix
+          - 'GitHubOrg'
+          - 'RepositoryName'
+          - 'StackNamePrefix'
     ParameterLabels:
       GitHubOrg:
         default: 'GitHub Organization'
@@ -26,21 +26,21 @@ Metadata:
 
 Parameters:
   GitHubOrg:
-    Type: String
+    Type: 'String'
     Description: 'GitHub organization or username'
 
   RepositoryName:
-    Type: String
+    Type: 'String'
     Description: 'GitHub repository name'
 
   StackNamePrefix:
-    Type: String
+    Type: 'String'
     Description: 'Prefix for CloudFormation stacks this role can manage'
     Default: 'minecraft'
 
 Resources:
   GitHubOIDCProvider:
-    Type: AWS::IAM::OIDCProvider
+    Type: 'AWS::IAM::OIDCProvider'
     Properties:
       Url: 'https://token.actions.githubusercontent.com'
       ClientIdList:
@@ -54,7 +54,7 @@ Resources:
           Value: 'Minecraft'
 
   GitHubActionsRole:
-    Type: AWS::IAM::Role
+    Type: 'AWS::IAM::Role'
     Properties:
       RoleName: !Sub '${AWS::StackName}-github-actions-role'
       AssumeRolePolicyDocument:
@@ -62,7 +62,7 @@ Resources:
         Statement:
           - Effect: 'Allow'
             Principal:
-              Federated: !GetAtt GitHubOIDCProvider.Arn
+              Federated: !GetAtt 'GitHubOIDCProvider.Arn'
             Action: 'sts:AssumeRoleWithWebIdentity'
             Condition:
               StringEquals:
@@ -85,7 +85,7 @@ Resources:
                   StringEquals:
                     'iam:PassedToService': 'cloudformation.amazonaws.com'
 
-      PermissionsBoundary: !Ref PermissionsBoundary
+      PermissionsBoundary: !Ref 'PermissionsBoundary'
       Tags:
         - Key: 'Application'
           Value: 'Minecraft'
@@ -100,8 +100,15 @@ Resources:
         Statement:
           - Effect: 'Allow'
             Action:
-              - 'cloudformation:*'
-            Resource: !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${StackNamePrefix}-*/*'
+              - 'cloudformation:CreateStack'
+              - 'cloudformation:UpdateStack'
+              - 'cloudformation:DeleteStack'
+              - 'cloudformation:DescribeStacks'
+              - 'cloudformation:DescribeStackEvents'
+              - 'cloudformation:DescribeStackResource'
+              - 'cloudformation:DescribeStackResources'
+            Resource: !Sub
+              'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${StackNamePrefix}-*/*'
 
           - Effect: 'Allow'
             Action:
@@ -109,6 +116,30 @@ Resources:
               - 'cloudformation:DescribeStacks'
               - 'cloudformation:ListStackResources'
             Resource: '*'
+
+          - Effect: 'Allow'
+            Action:
+              - 's3:CreateBucket'
+              - 's3:DeleteBucket'
+              - 's3:PutBucketPolicy'
+              - 's3:DeleteBucketPolicy'
+              - 's3:GetBucketPolicy'
+              - 's3:PutBucketVersioning'
+              - 's3:GetBucketVersioning'
+              - 's3:PutBucketPublicAccessBlock'
+              - 's3:GetBucketPublicAccessBlock'
+              - 's3:PutBucketLogging'
+              - 's3:GetBucketLogging'
+              - 's3:PutLifecycleConfiguration'
+              - 's3:GetLifecycleConfiguration'
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:s3:::${StackNamePrefix}-*'
+            Condition:
+              StringEquals:
+                'aws:CalledVia': ['cloudformation.amazonaws.com']
+              StringLike:
+                'aws:CalledViaFirst': 'cloudformation.amazonaws.com'
+                'aws:ResourceTag/aws:cloudformation:stack-name': !Sub '${StackNamePrefix}-*'
 
           - Effect: 'Allow'
             NotAction:
@@ -142,8 +173,8 @@ Resources:
 Outputs:
   OIDCProviderArn:
     Description: 'ARN of the GitHub OIDC provider'
-    Value: !GetAtt GitHubOIDCProvider.Arn
+    Value: !GetAtt 'GitHubOIDCProvider.Arn'
 
   RoleArn:
     Description: 'ARN of the IAM role for GitHub Actions'
-    Value: !GetAtt GitHubActionsRole.Arn
+    Value: !GetAtt 'GitHubActionsRole.Arn'

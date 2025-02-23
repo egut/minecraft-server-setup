@@ -9,8 +9,8 @@ on:
     branches: ['main']
 
 env:
-  LOG_STACK_NAME: 'rubik-logging'
-  BUCKET_STACK_NAME: 'rubik-deploy'
+  LOG_STACK_NAME: 'minecraft-rubik-logging'
+  BUCKET_STACK_NAME: 'minecraft-rubik-deploy'
   USE_LOG_BUCKET: 'true'
 
 permissions:
