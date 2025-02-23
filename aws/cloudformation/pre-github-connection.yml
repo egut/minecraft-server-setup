@@ -82,6 +82,29 @@ Resources:
                 Condition:
                   StringEquals:
                     'iam:PassedToService': 'cloudformation.amazonaws.com'
+        - PolicyName: 'IAMAndTaggingPermissions'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'iam:AttachRolePolicy'
+                  - 'iam:CreateRole'
+                  - 'iam:DeleteRole'
+                  - 'iam:DeleteRolePolicy'
+                  - 'iam:DetachRolePolicy'
+                  - 'iam:GetRole'
+                  - 'iam:PutRolePolicy'
+                  - 'iam:TagRole'
+                  - 'iam:UntagRole'
+                Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${StackNamePrefix}-*'
+              - Effect: 'Allow'
+                Action:
+                  - 'tag:GetResources'
+                  - 'tag:TagResources'
+                  - 'tag:UntagResources'
+                Resource: '*'
+
       Tags:
         - Key: 'Application'
           Value: 'Minecraft'

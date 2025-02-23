@@ -165,7 +165,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref 'VPC'
-      CidrBlock: !Select [0, !Cidr [!Ref 'VpcCidrBlock', 2, 26]]
+      CidrBlock: !Select [0, !Cidr [!Ref 'VpcCidrBlock', 4, 6]]
       AvailabilityZone: !Select [0, !GetAZs '']
       Tags:
         - Key: 'Name'
@@ -175,7 +175,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref 'VPC'
-      CidrBlock: !Select [1, !Cidr [!Ref 'VpcCidrBlock', 2, 26]]
+      CidrBlock: !Select [1, !Cidr [!Ref 'VpcCidrBlock', 4, 6]]
       AvailabilityZone: !Select [1, !GetAZs '']
       Tags:
         - Key: 'Name'
@@ -185,7 +185,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref 'VPC'
-      CidrBlock: !Select [2, !Cidr [!Ref 'VpcCidrBlock', 2, 26]]
+      CidrBlock: !Select [2, !Cidr [!Ref 'VpcCidrBlock', 4, 6]]
       AvailabilityZone: !Select [0, !GetAZs '']
       Tags:
         - Key: 'Name'
@@ -195,7 +195,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref 'VPC'
-      CidrBlock: !Select [3, !Cidr [!Ref 'VpcCidrBlock', 2, 26]]
+      CidrBlock: !Select [3, !Cidr [!Ref 'VpcCidrBlock', 4, 6]]
       AvailabilityZone: !Select [1, !GetAZs '']
       Tags:
         - Key: 'Name'
