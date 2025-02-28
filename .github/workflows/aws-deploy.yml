@@ -34,7 +34,7 @@ jobs:
 
       - name: 'Deploy Access Logs Bucket'
         if: "${{ env.USE_LOG_BUCKET == 'true' }}"
-        uses: 'egut/aws-cloudformation-github-deploy@1.4.0'
+        uses: 'egut/aws-cloudformation-github-deploy@latest'
         with:
           name: '${{ env.STACK_NAME_PREFIX }}-${{ env.SERVER_NAME }}-logging'
           template: 'aws/cloudformation/s3-log-bucket.yml'
