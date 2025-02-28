@@ -34,11 +34,13 @@ jobs:
 
       - name: 'Deploy Access Logs Bucket'
         if: "${{ env.USE_LOG_BUCKET == 'true' }}"
-        uses: 'aws-actions/aws-cloudformation-github-deploy@v1'
+        uses: 'egut/aws-cloudformation-github-deploy@1.4.0'
         with:
           name: '${{ env.STACK_NAME_PREFIX }}-${{ env.SERVER_NAME }}-logging'
           template: 'aws/cloudformation/s3-log-bucket.yml'
           no-fail-on-empty-changeset: '1'
+          tags:
+            Owner: 'egut'
 
   deploy-s3-buckets:
     runs-on: 'ubuntu-latest'
